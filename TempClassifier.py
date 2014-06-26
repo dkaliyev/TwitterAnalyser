@@ -16,7 +16,7 @@ if __name__ == "__main__":
     classifier = nltk.NaiveBayesClassifier.train(cl.training_set)
     print "Training done!"
     print ctime()
-    f = open('NaiveBayesv2.pickle', 'wb')
+    f = open('NaiveBayesv6.1.pickle', 'wb')
     pickle.dump(classifier, f)
     f.close()
     print nltk.classify.accuracy(classifier, cl.devtest_set)

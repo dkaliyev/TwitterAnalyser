@@ -26,7 +26,7 @@ class ClassifierBigram(object):
 
         timed_print("Done")
 
-        most_inf = NBclassifier.most_informative_features(200)
+        most_inf = NBclassifier.most_informative_features(100)
         self.bestwords = [w for (w,s) in most_inf]
         
         timed_print("Reading dataset")
