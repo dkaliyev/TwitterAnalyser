@@ -5,11 +5,12 @@ import pickle
 from time import ctime
 
 if __name__ == '__main__':
-	f = open('NaiveBayesv6.pickle')
+	f = open('NaiveBayesv6.1.pickle')
 	classifier = pickle.load(f)
 	cl = TweetClassifier()
 	f.close()
 	word_features = [w for (w, s) in classifier.most_informative_features(150)]
+	print "Loaded %s features" % len(word_features)
 	print ctime(), "Generating training set"
 	cl.generate_training_set(word_features)
 	

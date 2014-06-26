@@ -20,7 +20,7 @@ class ClassifierBigram(object):
         english_stops = set(stopwords.words('english'))
         timed_print("Reading NB pickle")
 
-        f = open('NaiveBayes5k.pickle')
+        f = open('NaiveBayes6.1.pickle')
         NBclassifier = pickle.load(f)
         f.close()
 
