@@ -74,6 +74,7 @@ class ClassifierBigram(object):
         timed_print("Writing pickle")
         f = open('MaxentV1.pickle')
         pickle.dump(classifier, f)
+        f.close()
         timed_print("Done")
 
         timed_print("Calculating the accuracy")
