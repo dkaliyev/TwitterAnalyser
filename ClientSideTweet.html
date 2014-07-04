@@ -1,0 +1,36 @@
+<html>
+	<head>
+		<link rel="stylesheet" type="text/css" href="css/twitter.css">
+	</head>
+	<body>
+		<div class="root timeline twitter-timeline">
+			<div class="stream" style="height: 263px">
+				<ol class="h-feed">
+				{% for tweet in tweets %}
+					<li class="h-entry tweet">
+						<div class="header">
+							<a class="u-url permalink" href="https://twitter.com/{{tweet.screen_name}}/statuses/{{tweet.id}}">
+								<time pubdate class="dt-update">
+								"18"<abbr title="minutes">m</abbr>	
+								</time>	
+							</a>
+							<div class="h-card p-author">
+								<a class="u-url profile" href="https://twitter.com/{{tweet.screen_name}}">
+									<img class="u-photo avatar" src="">
+									<span class="full-name">
+										<span class="p-name customisable-highlight">{{tweet.screen_name}}</span>
+										<span class="p-nickname">@<b>{{tweet.screen_name}}</b></span>
+									</span>
+								</a>
+							</div>
+						</div>
+						<div class="e-entry-content">
+    						<p class="e-entry-title">{{tweet.text}}</p>
+  						</div>
+					</li>
+				{% endfor %}
+				</ol>
+			</div>
+		</div>
+	</body>
+</html>

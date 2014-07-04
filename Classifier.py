@@ -1,5 +1,4 @@
 import nltk
-import re
 from nltk.corpus import stopwords
 from sklearn.naive_bayes import BernoulliNB
 from sklearn.svm import SVC
