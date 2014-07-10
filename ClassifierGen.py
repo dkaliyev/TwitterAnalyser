@@ -37,14 +37,17 @@ def start():
         classes = classification['classes']
         
         records = tweets_collection.find({"clasfId":classification_id})
-        print records.count()
-        for record in records:
-            tweet = record['text']
-            class_id = record['classId']
-            class_label = get_class_label(class_id, classes)
-            tweets.append(features_from_tweet(tweet, class_label, word_indicator, stopwords=sw))
+        print classification_name, records.count()
+
         if classification_id in global_count.keys():
             if int(records.count()/500)>global_count[classification_id]:
+                for record in records:
+                    tweet = record['text']
+                    class_id = record['classId']
+                    class_label = get_class_label(class_id, classes)
+                    feats = features_from_tweet(tweet, class_label, word_indicator, stopwords=sw)
+                    print feats
+                    tweets.append(feats)
                 classifier = NaiveBayesClassifier.train(tweets)
                 f = open("%s.pickle"%classification_name, 'wb')
                 pickle.dump(classifier, f)

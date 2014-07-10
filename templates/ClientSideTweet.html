@@ -1,11 +1,18 @@
 <html>
 	<head>
 		<link rel="stylesheet" type="text/css" href="{{url_for('static', filename='twitter.css')}}">
-		<link rel="stylesheet" type="text/css" href="{{url_for('static', filename='jqx.base.css')}}">
+		<link rel="stylesheet" type="text/css" href="{{url_for('static', filename='jquery-ui.css')}}">
+		<link rel="stylesheet" type="text/css" href="{{url_for('static', filename='style.css')}}">
+		
 		<script type="text/javascript" src="{{url_for('static', filename='jquery-1.11.1.min.js')}}"></script>
-		<script type="text/javascript" src="{{url_for('static', filename='jqxcore.js')}}"></script>
-		<script type="text/javascript" src="{{url_for('static', filename='jqxmenu.js')}}"></script>
+		<script type="text/javascript" src="{{url_for('static', filename='jquery-ui.js')}}"></script>
+		<script type="text/javascript" src="{{url_for('static', filename='jquery.ui-contextmenu.js')}}"></script>
+		<script type="text/javascript" src="{{url_for('static', filename='jquery.bpopup.min.js')}}"></script>
+		
+		
 		<script type="text/javascript" src="{{url_for('static', filename='knockout-3.1.0.js')}}"></script>
+
+		
 	</head>
 	<body>
 		<script type="text/javascript">
@@ -16,12 +23,23 @@
             	obj["content"] = [];
             	$.getJSON( "http://127.0.0.1:5000/classification", function( data ) {
 				  classifications = data;
+				  classifications.push({"_id": "1", "classes": [{"_id":1, "name":"Add new"}], "classification": "Other"});
 					var viewModel = {
 						self :this,
 	        			categories: ko.observableArray(classifications),
 	        			addNew : function(id){
-	        				console.log("Added "+this["name"]+" "+id);
-	        				obj["content"].push({"clasfId":id, "classId":this["_id"], "text":currTweet, "tweet_id":tweetId});
+	        				if(id=="1")
+	        				{
+	        					console.log("Add new");
+	        					$('#element_to_pop_up').bPopup({modalClose: false});
+	        				}
+	        				else
+	        				{
+	        					console.log("Added "+this["name"]+" "+id);
+		        				obj["content"].push({"clasfId":id, "classId":this["_id"], "text":currTweet, "tweet_id":tweetId});
+		        				$("#li"+tweetId).css("background-color", "#FAFA4B")
+	        				}
+	        				
 	        			},
 	        			send: function(){
 		        			console.log("sending");
@@ -31,29 +49,43 @@
 							  url: "http://127.0.0.1:5000/trainer",
 							  data: JSON.stringify(obj),
 							  success: function (data) {
-							    console.log(data);
+							    ids = data["ids"];
+							    ids.forEach(function(d){
+							    	for(var k in d){
+							    		if(d[k] != "None")
+							    		{
+							    			$("#li"+k).css("background-color", "#62FA5C");
+							    		}
+							    		else
+							    		{
+							    			$("#li"+k).css("background-color", "#F52727");
+							    		}
+							    	}
+							    });
 							  },
 							  dataType: "json"
 							});
 		        		}
     				}
 
-    				//console.log(viewModel.categories());
     				ko.applyBindings(viewModel);
-    			    contextMenu = $("#jqxMenu").jqxMenu({ width: '120px', height: '140px', autoOpenPopup: false, mode: 'popup'});
+    			    $(document).contextmenu({
+					    delegate: ".hasmenu",
+					    menu: "#options",
+					    select: function(){
+
+					    }
+					});
+
             	});
 
             	
-            	$(".myTweet").click(function (event) {
+            	$(".myTweet").bind("contextmenu", function (event) {
             			tweetId = $(this).attr("data-tweet-id");
             			currTweet = $('#'+tweetId).text();
-                    //var rightClick = isRightClick(event);
-                    //if (rightClick) {
                         var scrollTop = $(window).scrollTop();
                         var scrollLeft = $(window).scrollLeft();
-                        contextMenu.jqxMenu('open', parseInt(event.clientX) + 5 + scrollLeft, parseInt(event.clientY) + 5 + scrollTop);
-                        return false;
-                    //}
+                        return true;
                 });
             })
         </script>
@@ -63,7 +95,7 @@
 				<div class="stream" style="height: 263px">
 					<ol class="h-feed">
 					{% for tweet in tweets %}
-						<li class="h-entry tweet myTweet" data-tweet-id={{tweet.id}}>
+						<li id="{{'li'+tweet.id|string}}" class="h-entry tweet myTweet hasmenu" data-tweet-id={{tweet.id}}>
 							<div class="header">
 								<a class="u-url permalink" href="https://twitter.com/{{tweet.screen_name}}/statuses/{{tweet.id}}">
 									<time pubdate class="dt-update">
@@ -90,10 +122,10 @@
 			</div>
 			<button data-bind="click:send"> Send </button>
 		</div>
-		<div id='jqxMenu'>
-                <ul data-bind="foreach: { data: categories, as: 'category' }">
+		<div>
+                <ul id='options' data-bind="foreach: { data: categories, as: 'category' }" style="display: none; min-width:80px">
 				    <li> <span data-bind="text: category.classification"></span>:
-				        <ul data-bind="foreach: { data: classes, as: 'item' }">
+				        <ul data-bind="foreach: { data: classes, as: 'item' }" style="min-width:50px">
 				            <li>  
 				                <span data-bind="text: item.name, click: $root.addNew.bind($data, $parent._id)" style="display:block; width:100%"></span>
 				            </li>
@@ -101,5 +133,11 @@
 				    </li>
 				</ul>
         </div>
+
+        <div id="element_to_pop_up">
+		    <a class="b-close">x<a/>
+		    Content of popup
+		        <button class="b-close c"> Close </button>
+		</div>
 	</body>
 </html>

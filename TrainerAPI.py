@@ -88,10 +88,9 @@ def crossdomain(origin=None, methods=None, headers=None,
 @app.route("/", methods=["GET"])
 def index():
     tweets = []
-    print "Request received"
     try:
         #for status in tweepy.Cursor(api.user_timeline, screen_name='goodnews', include_rts=False, count=5).items():
-        statuses = tweepy.Cursor(api.user_timeline, screen_name='goodnews', include_rts=False, count=30).items(30)
+        statuses = tweepy.Cursor(api.user_timeline, screen_name='hmvtweets', include_rts=False, count=30).items(30)
         for status in statuses:
             #print "Getting"
             d = MyTweet()
@@ -110,8 +109,6 @@ def index():
             tweets.append(d)
     except tweepy.TweepError as err:
             print err.str()
-    print "Done parsing"
-    print tweets
     classifications = get_classifications()
     global_ids.update(get_ids(classifications))
     #return Response(json.dumps(tweets),  mimetype='application/json')
