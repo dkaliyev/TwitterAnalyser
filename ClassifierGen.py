@@ -29,6 +29,7 @@ def connect(db_name, tweets_collection_name, classification_collection_name):
 def start():
     global classifications_collection, tweets_collection, global_count
     sw = stopwords.words('english')
+    thr = 5
     for classification in classifications_collection.find():
         tweets = []
         classification_name = classification['classification']
@@ -37,10 +38,12 @@ def start():
         classes = classification['classes']
         
         records = tweets_collection.find({"clasfId":classification_id})
-        print classification_name, records.count()
+        records_count = records.count()
+        print classification_name, records_count
 
         if classification_id in global_count.keys():
-            if int(records.count()/500)>global_count[classification_id]:
+            if int(records.count()/thr)>global_count[classification_id]:
+                print "Exceeded threshold. Training started"
                 for record in records:
                     tweet = record['text']
                     class_id = record['classId']
@@ -52,11 +55,11 @@ def start():
                 f = open("%s.pickle"%classification_name, 'wb')
                 pickle.dump(classifier, f)
                 f.close()
-                global_count[classification_id] = int(records.count()/500)
+                global_count[classification_id] = int(records_count/thr)
             else:
                 pass
         else:
-            global_count[classification_id] = int(records.count()/500)
+            global_count[classification_id] = int(records_count/500)
 
 def get_class_label(_id, classes):
     for _class in classes:

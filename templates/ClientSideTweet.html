@@ -3,11 +3,13 @@
 		<link rel="stylesheet" type="text/css" href="{{url_for('static', filename='twitter.css')}}">
 		<link rel="stylesheet" type="text/css" href="{{url_for('static', filename='jquery-ui.css')}}">
 		<link rel="stylesheet" type="text/css" href="{{url_for('static', filename='style.css')}}">
-		
+		<link rel="stylesheet" type="text/css" href="{{url_for('static', filename='bootstrap.css')}}">
+
 		<script type="text/javascript" src="{{url_for('static', filename='jquery-1.11.1.min.js')}}"></script>
 		<script type="text/javascript" src="{{url_for('static', filename='jquery-ui.js')}}"></script>
 		<script type="text/javascript" src="{{url_for('static', filename='jquery.ui-contextmenu.js')}}"></script>
 		<script type="text/javascript" src="{{url_for('static', filename='jquery.bpopup.min.js')}}"></script>
+		<script type="text/javascript" src="{{url_for('static', filename='bootstrap.js')}}"></script>
 		
 		
 		<script type="text/javascript" src="{{url_for('static', filename='knockout-3.1.0.js')}}"></script>
@@ -20,18 +22,25 @@
 			currTweet = "";
 			tweetId = "";	
             $(document).ready(function () {
+            	var classes_exp = /((\w)+,[ ]*(?=(\w)+))+/
+            	var clsf_exp = /(\w)+/
             	obj["content"] = [];
             	$.getJSON( "http://127.0.0.1:5000/classification", function( data ) {
 				  classifications = data;
 				  classifications.push({"_id": "1", "classes": [{"_id":1, "name":"Add new"}], "classification": "Other"});
-					var viewModel = {
-						self :this,
-	        			categories: ko.observableArray(classifications),
-	        			addNew : function(id){
+					var viewModel = function(){
+						self = this,
+	        			self.categories= ko.observableArray(classifications),
+	        			self.cls_names = ko.observable(""),
+	        			self.clsf_name = ko.observable(""),
+	        			self.addNew = function(id){
 	        				if(id=="1")
 	        				{
 	        					console.log("Add new");
-	        					$('#element_to_pop_up').bPopup({modalClose: false});
+	        					s = $('#element_to_pop_up').bPopup({modalClose: false, onClose: function() {
+					    	self.cls_names("");
+					    	self.clsf_name("");
+					    }});
 	        				}
 	        				else
 	        				{
@@ -41,7 +50,7 @@
 	        				}
 	        				
 	        			},
-	        			send: function(){
+	        			self.send= function(){
 		        			console.log("sending");
 		        			$.ajax({
 							  type: "POST",
@@ -65,16 +74,54 @@
 							  },
 							  dataType: "json"
 							});
+		        		},
+		        		self.addClassification= function(){
+		        			var tmp_clsf_name = self.clsf_name();
+		        			var m1 = tmp_clsf_name.match(clsf_exp);
+		        			var tmp_cls_names = self.cls_names();
+		        			var m2 = tmp_cls_names.match(classes_exp);
+		        			console.log(m1);
+		        			console.log(m2);
+		        			if(m1&&m2)
+		        			{
+		        				var to_send = 
+		        				$.ajax({
+								  type: "POST",
+								  contentType: "application/json; charset=utf-8",
+								  url: "http://127.0.0.1:5000/classification",
+								  data: JSON.stringify({"classification": tmp_clsf_name, "classes":tmp_cls_names.split(",")}),
+								  success: function (data) {
+								    if(data['id']==-1)
+								    {
+								    	console.log(data['Error']);
+								    }
+								    else
+								    {
+								    	other = self.categories.pop();
+								    	console.log(other);
+								    	self.categories.push(data);
+								    	self.categories.push(other);
+								    	console.log("done");
+								    	$(document).contextmenu("replaceMenu", "#options");
+								    	s.close();
+								    }
+								  },
+								  dataType: "json"
+								});
+		        				
+		        			}
+		        				
 		        		}
     				}
 
-    				ko.applyBindings(viewModel);
-    			    $(document).contextmenu({
+    				ko.applyBindings(new viewModel());
+    			    m = $(document).contextmenu({
 					    delegate: ".hasmenu",
 					    menu: "#options",
 					    select: function(){
 
 					    }
+					    
 					});
 
             	});
@@ -120,7 +167,7 @@
 					</ol>
 				</div>
 			</div>
-			<button data-bind="click:send"> Send </button>
+			<button type="button" class="b-close c btn btn-default" data-bind="click:send"> Send </button>
 		</div>
 		<div>
                 <ul id='options' data-bind="foreach: { data: categories, as: 'category' }" style="display: none; min-width:80px">
@@ -135,9 +182,38 @@
         </div>
 
         <div id="element_to_pop_up">
-		    <a class="b-close">x<a/>
-		    Content of popup
-		        <button class="b-close c"> Close </button>
+		   	<form id="target" class="form-horizontal">
+              <fieldset>
+              	<div class="component">
+					<legend>Adding new classification</legend>
+				</div>
+				<div class="component">
+					<div class="form-group">
+					  <label class="col-md-4 control-label" for="classificaiton_name">Classification</label>  
+					  <div class="col-md-5">
+					  <input id="classificaiton_name" name="classificaiton_name" data-bind="value: clsf_name" type="text" placeholder="e.g Sentiment" class="form-control input-md" required="">
+					  </div>
+					</div>
+				</div>
+				<div class="component">
+					<div class="form-group">
+					  <label class="col-md-4 control-label" for="classes">Classes</label>  
+					  <div class="col-md-5">
+					  <input id="classes" name="classes" data-bind="value: cls_names" type="text" placeholder="e.g Positive, Negative, Neutral" class="form-control input-md" required="">
+					  <span class="help-block">class names should not contain spaces and must be separated by comma</span>  
+					  </div>
+					</div>
+					<div class="component">
+					 	<div class="form-group">
+						  <label class="col-md-4 control-label" for="add_class_btn"></label>
+						  <div class="col-md-8">
+						    <button id="add_class_btn" name="add_class_btn" class="btn btn-primary" data-bind="click: addClassification">Add classification</button>
+						    <button id="cancel_btn" name="cancel_btn" class="btn btn-default b-close">Cancel</button>
+						  </div>
+						</div>
+					</div>
+				</div>
+			   </fieldset></form>
 		</div>
 	</body>
 </html>

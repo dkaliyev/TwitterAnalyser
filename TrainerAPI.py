@@ -159,19 +159,27 @@ def classification():
                 return Response(json.dumps({"Error":"The keys do not match, please try again"}), mimetype='application/json')
             if len(data['classes']) == 0:
                 return Response(json.dumps({"Error":"You must provide at least 2 classes"}), mimetype='application/json')
+            current_clsfs = get_classifications()
+            for clsf in current_clsfs:
+                if clsf['classification'] == data['classification']:
+                    return Response(json.dumps({"id":"-1", "Error":"Classification already exists"}), mimetype='application/json')
             tmp['dateCreated'] = strftime("%Y-%m-%dT%H:%M:%SZ", localtime())
             tmp['classification'] = data['classification']
             tmp['classes'] = []
+            tmp_classes = []
             for _class in data['classes']:
                 tmp['classes'].append({'_id':ObjectId(), 'name':_class})
+                tmp_classes.append({'_id':str(ObjectId()), 'name':_class})
             _id = mongo.db.classifications.insert(tmp)
             if _id != None:
                 _id = str(_id)
                 ob[_id] = [str(_class['_id']) for _class in tmp['classes']]
                 global_ids.update(ob)
-                return Response(json.dumps({"id":_id}), mimetype='application/json')
+                tmp["_id"] = _id
+                tmp["classes"] = tmp_classes
+                return Response(json.dumps(tmp), mimetype='application/json')
             else:
-                return Response(json.dumps({"id":"-1"}), mimetype='application/json')
+                return Response(json.dumps({"id":"-1", "Error":"Cant insert new into database"}), mimetype='application/json')
         
                 
 
