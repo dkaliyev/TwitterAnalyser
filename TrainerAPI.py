@@ -169,14 +169,15 @@ def classification():
             tmp_classes = []
             for _class in data['classes']:
                 tmp['classes'].append({'_id':ObjectId(), 'name':_class})
-                tmp_classes.append({'_id':str(ObjectId()), 'name':_class})
+                #tmp_classes.append({'_id':str(ObjectId()), 'name':_class})
             _id = mongo.db.classifications.insert(tmp)
             if _id != None:
                 _id = str(_id)
                 ob[_id] = [str(_class['_id']) for _class in tmp['classes']]
                 global_ids.update(ob)
                 tmp["_id"] = _id
-                tmp["classes"] = tmp_classes
+                tmp_classes = [{"_id":str(_class['_id']), "name":_class['name']} for _class in tmp['classes']]
+                tmp['classes'] = tmp_classes
                 return Response(json.dumps(tmp), mimetype='application/json')
             else:
                 return Response(json.dumps({"id":"-1", "Error":"Cant insert new into database"}), mimetype='application/json')
@@ -194,7 +195,7 @@ def trainer():
         classifications = get_classifications()
         global_ids = copy.deepcopy(get_ids(classifications))
         if global_ids == {}:
-            return Response(json.dumps({"Error":"Please first create class!"}))
+            return Response(json.dumps({"Error":"Please first create class!"}), mimetype='application/json')
     keys = global_ids.keys()
     tmp = {}
     ids = []
@@ -211,6 +212,7 @@ def trainer():
         if data['clasfId'] not in keys:
             return Response(json.dumps({"Error":"Cannot match classification id"}))
         if data['classId'] not in global_ids[data['clasfId']]:
+            print global_ids[data['clasfId']]
             return Response(json.dumps({"Error":"Cannot match class id"}))
         for key, value in data.iteritems():
             tmp[key] = value
