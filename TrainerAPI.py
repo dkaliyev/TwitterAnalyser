@@ -32,6 +32,8 @@ tweets_fields = set(['clasfId', 'classId', 'text', 'tweet_id'])
 classification_fields = set(['classification', 'classes'])
 global_ids = {}
 classifier = None
+mode = 1 # 0:online, 1:offline
+global_tweets = []
 
 class MyTweet(dict):
     pass
@@ -88,27 +90,33 @@ def crossdomain(origin=None, methods=None, headers=None,
 @app.route("/", methods=["GET"])
 def index():
     tweets = []
-    try:
-        #for status in tweepy.Cursor(api.user_timeline, screen_name='goodnews', include_rts=False, count=5).items():
-        statuses = tweepy.Cursor(api.user_timeline, screen_name='hmvtweets', include_rts=False, count=30).items(30)
-        for status in statuses:
-            #print "Getting"
-            d = MyTweet()
-            #print "Created class inst"
-            #print tweets.append(status)
-            #print status._json['id']
-            setattr(d, "id", status._json['id'])
-            #setattr(d, "id", 7549804)
-            #print "set first attr", d.id
-            setattr(d, "screen_name", status._json["user"]["screen_name"])
-            setattr(d, "name",status._json["user"]["name"])
-            setattr(d, "text", status._json["text"])
-            setattr(d, "ava", status._json["user"]["profile_image_url_https"])
-            setattr(d, "date", arrow.get(mktime(strptime(status._json["created_at"],"%a %b %d %H:%M:%S +0000 %Y"))).humanize())
-            #setattr(d, "text", "test status")
-            tweets.append(d)
-    except tweepy.TweepError as err:
-            print err.str()
+    if not mode:
+        try:
+            #for status in tweepy.Cursor(api.user_timeline, screen_name='goodnews', include_rts=False, count=5).items():
+            statuses = tweepy.Cursor(api.user_timeline, screen_name='hmvtweets', include_rts=False, count=30).items(30)
+
+            for status in statuses:
+                #print "Getting"
+                d = MyTweet()
+                #print "Created class inst"
+                #print tweets.append(status)
+                #print status._json['id']
+                setattr(d, "id", status._json['id'])
+                #setattr(d, "id", 7549804)
+                #print "set first attr", d.id
+                setattr(d, "screen_name", status._json["user"]["screen_name"])
+                setattr(d, "name",status._json["user"]["name"])
+                setattr(d, "text", status._json["text"])
+                setattr(d, "ava", status._json["user"]["profile_image_url_https"])
+                setattr(d, "date", arrow.get(mktime(strptime(status._json["created_at"],"%a %b %d %H:%M:%S +0000 %Y"))).humanize())
+                #setattr(d, "text", "test status")
+                tweets.append(d)
+        except tweepy.TweepError as err:
+                print err.str()
+    else:
+        print "Offline mode"
+        global global_tweets
+        tweets = global_tweets
     classifications = get_classifications()
     global_ids.update(get_ids(classifications))
     #return Response(json.dumps(tweets),  mimetype='application/json')
@@ -260,4 +268,8 @@ def main():
         return Response(json.dumps({"Status": 0, "Result":result}), mimetype='application/json')
     
 if __name__ == '__main__':
+    if mode:
+        f = open("statuses.pickle")
+        global_tweets = pickle.load(f)
+        f.close()
     app.run(debug=True)

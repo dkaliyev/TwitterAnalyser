@@ -59,7 +59,20 @@ def start():
             else:
                 pass
         else:
-            global_count[classification_id] = int(records_count/500)
+            global_count[classification_id] = int(records_count/thr)
+            if global_count[classification_id] >=1:
+                print "New classification or just started monitor"
+                for record in records:
+                    tweet = record['text']
+                    class_id = record['classId']
+                    class_label = get_class_label(class_id, classes)
+                    feats = features_from_tweet(tweet, class_label, word_indicator, stopwords=sw)
+                    print feats
+                    tweets.append(feats)
+                classifier = NaiveBayesClassifier.train(tweets)
+                f = open("%s.pickle"%classification_name, 'wb')
+                pickle.dump(classifier, f)
+                f.close()
 
 def get_class_label(_id, classes):
     for _class in classes:
@@ -68,7 +81,8 @@ def get_class_label(_id, classes):
     return None
         
 def preprocess_tweet(_tweet):
-    tweet = re.sub(r'(@[a-zA-Z0-9]+)|(http://[a-zA-Z0-9]*(.com|.ru|.org|.uk|.us|.net|.ly)+[a-zA-Z0-9]*)', '', _tweet)      
+    #tweet = re.sub(r'(@[a-zA-Z0-9]+)|(http://[a-zA-Z0-9]*(.com|.ru|.org|.uk|.us|.net|.ly)+[/a-zA-Z0-9]*)', '', _tweet)
+    tweet = re.sub(r'(@[a-zA-Z0-9]+)|(http://[a-zA-Z0-9]*[.][a-zA-Z]+[/a-zA-Z0-9]*)|([".#]+)', '', _tweet)            
     return tweet
         
 def word_indicator(tweet, **kwargs):
@@ -80,8 +94,10 @@ def word_indicator(tweet, **kwargs):
 
 def get_tweet_words(_tweet, stopwords = []):
     tweet = preprocess_tweet(_tweet)
+    user_set = set(["http", "://"])
     tweet_words = set(wordpunct_tokenize(tweet.lower()))
     tweet_words = tweet_words.difference(stopwords)
+    tweet_words = tweet_words.difference(user_set)
     tweet_words = [w for w in tweet_words if len(w)>2]
     return tweet_words
 

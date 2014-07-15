@@ -19,21 +19,49 @@
 	<body>
 		<script type="text/javascript">
 			obj = {};
+			obj1 = {};
 			currTweet = "";
 			tweetId = "";	
+
+			obj_to_list = function(obj){
+				var classifications = [];
+				for(var tweet_id in obj)
+				{
+					for(var clasfId in obj[tweet_id])
+					{
+						classifications.push({"clasfId":clasfId, "classId":obj[tweet_id][clasfId]["classId"], "text":obj[tweet_id][clasfId]["text"], "tweet_id":tweet_id});
+					}
+				}
+
+				return classifications;
+			}
+
             $(document).ready(function () {
             	var classes_exp = /((\w)+,[ ]*(?=(\w)+))+/
             	var clsf_exp = /(\w)+/
             	obj["content"] = [];
             	$.getJSON( "http://127.0.0.1:5000/classification", function( data ) {
 				  classifications = data;
+				  currClass = classifications[0]["classification"];
+				  $('.'+currClass).css("display","block");
+	        	  $('.'+currClass).css("z-index",99999);
 				  classifications.push({"_id": "1", "classes": [{"_id":1, "name":"Add new"}], "classification": "Other"});
 					var viewModel = function(){
 						self = this,
+						self.currentClass = currClass,
 	        			self.categories= ko.observableArray(classifications),
 	        			self.cls_names = ko.observable(""),
 	        			self.clsf_name = ko.observable(""),
-	        			self.addNew = function(id){
+	        			self.test = function(name){
+	        				console.log('clicked');
+	        				$('.classf').removeClass("btn-primary");
+	        				$('#btn-'+name).addClass("btn-primary");
+	        				$('.'+self.currentClass).css("display","none");
+	        				$('.'+name).css("display","block");
+	        				$('.'+name).css("z-index",99999);
+	        				self.currentClass = name;
+	        			},
+	        			self.addNew = function(id, tweet_id){
 	        				if(id=="1")
 	        				{
 	        					console.log("Add new");
@@ -44,19 +72,25 @@
 	        				}
 	        				else
 	        				{
+	        					$('.btn-'+tweet_id).removeClass("btn-primary");
+	        					$('#btn-'+tweet_id+'-'+id+'-'+this["_id"]).addClass("btn-primary");
 	        					console.log("Added "+this["name"]+" "+id);
-		        				obj["content"].push({"clasfId":id, "classId":this["_id"], "text":currTweet, "tweet_id":tweetId});
-		        				$("#li"+tweetId).css("background-color", "#FAFA4B")
+		        				//obj["content"].push({"clasfId":id, "classId":this["_id"], "text":$('#'+tweet_id).text(), "tweet_id":tweet_id});
+		        				if(obj1[tweet_id]==undefined)
+		        				obj1[tweet_id] = {};
+		        				obj1[tweet_id][id] = {"classId":this["_id"], "text":$('#'+tweet_id).text()};
+		        				$("#li"+tweet_id).css("background-color", "#FAFA4B")
 	        				}
 	        				
 	        			},
 	        			self.send= function(){
 		        			console.log("sending");
+		        			var to_send = obj_to_list(obj1);
 		        			$.ajax({
 							  type: "POST",
 							  contentType: "application/json; charset=utf-8",
 							  url: "http://127.0.0.1:5000/trainer",
-							  data: JSON.stringify(obj),
+							  data: JSON.stringify({"content":to_send}),
 							  success: function (data) {
 							    ids = data["ids"];
 							    ids.forEach(function(d){
@@ -134,38 +168,79 @@
                         var scrollLeft = $(window).scrollLeft();
                         return true;
                 });
+
+                $('.myClass').click(function (e) {
+				  //e.preventDefault();
+				  console.log("cl");
+				  //console.log($(this).attr('href'));
+				  //$(this).tab('show')
+				});
             })
         </script>
 
-		<div class="twitter-timeline twitter-timeline-rendered" style="border: none; max-width: 100%; min-width: 180px; width: 520px; height:350">
-			<div class="root timeline ltr customisable-border twitter-timeline not-touch twitter-timeline-rendered pending-scroll-in">
-				<div class="stream" style="height: 263px">
-					<ol class="h-feed">
-					{% for tweet in tweets %}
-						<li id="{{'li'+tweet.id|string}}" class="h-entry tweet myTweet hasmenu" data-tweet-id={{tweet.id}}>
-							<div class="header">
-								<a class="u-url permalink" href="https://twitter.com/{{tweet.screen_name}}/statuses/{{tweet.id}}">
-									<time pubdate class="dt-update">
-									<abbr title="minutes">{{tweet.date}}</abbr>	
-									</time>	 
-								</a>
-								<div class="h-card p-author">
-									<a class="u-url profile" href="https://twitter.com/{{tweet.screen_name}}">
-										<img class="u-photo avatar" src="{{tweet.ava}}">
-										<span class="full-name">
-											<span class="p-name customisable-highlight">{{tweet.name}}</span>
-											<span class="p-nickname">@<b>{{tweet.screen_name}}</b></span>
-										</span>
-									</a>
-								</div>
-							</div>
-							<div class="e-entry-content">
-	    						<p id={{tweet.id}} class="e-entry-title">{{tweet.text}}</p>
-	  						</div>
-						</li>
-					{% endfor %}
-					</ol>
+		<div class="col-md-9 twitter-timeline twitter-timeline-rendered" style="border: none; max-width: 100%; min-width: 180px; height:350">
+			<div class="row" style="margin-bottom:10px">
+				<div class="col-md-6 col-md-offset-6">
+					<div class="btn-group">
+						<!-- ko foreach: { data: categories, as: 'category' } -->
+							
+							  <button type="button" class="btn btn-default classf" data-bind="text: category.classification, attr: {id:'btn-'+category.classification}, click: $root.test.bind($data, category.classification)"></button>
+							
+						<!-- /ko -->
+					</div>
 				</div>
+			</div>
+			<div class="row">
+
+					<div class="root timeline ltr twitter-timeline not-touch twitter-timeline-rendered pending-scroll-in">
+						<div class="stream" style="height: 263px">
+							<ol class="h-feed">
+							{% for tweet in tweets %}
+								<li id="{{'li'+tweet.id|string}}" class="h-entry tweet myTweet hasmenu" data-tweet-id={{tweet.id}}>
+									<div class="row">
+										<div class="col-md-6">
+											<div class="header">
+												<a class="u-url permalink" href="https://twitter.com/{{tweet.screen_name}}/statuses/{{tweet.id}}">
+													<time pubdate class="dt-update">
+													<abbr title="minutes">{{tweet.date}}</abbr>	
+													</time>	 
+												</a>
+												<div class="h-card p-author">
+													<a class="u-url profile" href="https://twitter.com/{{tweet.screen_name}}">
+														<img class="u-photo avatar" src="{{tweet.ava}}">
+														<span class="full-name">
+															<span class="p-name customisable-highlight">{{tweet.name}}</span>
+															<span class="p-nickname">@<b>{{tweet.screen_name}}</b></span>
+														</span>
+													</a>
+												</div>
+											</div>
+
+											<div class="e-entry-content">
+					    						<p id={{tweet.id}} class="e-entry-title">{{tweet.text}}</p>
+					  						</div>
+			  							</div>
+			  							<div class="col-md-6">
+			  								<div>
+												<!-- ko foreach: { data: categories, as: 'category' } -->
+													<div data-bind="attr:{class:category.classification}" style="position:absolute; top:0; left:0; display:none;">
+														<div class="btn-group">
+															<!-- ko foreach: { data: classes, as: 'item' } -->
+															  <button type="button" class="btn btn-default btn-{{tweet.id}}" data-bind="attr:{id:'btn-'+{{tweet.id}}+'-'+$parent._id+'-'+item._id}, text:item.name, click: $root.addNew.bind($data, $parent._id, {{tweet.id}})"></button>
+														  	<!-- /ko -->
+														</div>
+														
+													</div>
+												<!-- /ko -->
+											</div>
+			  							</div>
+				  					</div>	
+								</li>
+							{% endfor %}
+							</ol>
+						</div>
+					</div>
+
 			</div>
 			<button type="button" class="b-close c btn btn-default" data-bind="click:send"> Send </button>
 		</div>
