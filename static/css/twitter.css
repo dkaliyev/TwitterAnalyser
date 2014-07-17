@@ -1,0 +1,46 @@
+ .tweet-li
+{
+	font:300 normal normal 14px/16px "Gotham Narrow","Helvetica Neue",Roboto,"Segoe UI",Calibri,sans-serif;text-decoration:none;-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%;text-transform:none;vertical-align:baseline;list-style:none;border:0;-webkit-outline:0;-moz-outline:0;-ms-outline:0;-o-outline:0;outline:0
+}
+body{display:block;background:transparent}
+img{border:0}
+b,i{font-style:normal;font-weight:normal}
+abbr{border-bottom:0}
+.p-author:before,.p-author:after,.cards-base:before,.cards-base:after{display:table;content:""}
+.p-author:after,.cards-base:after{clear:both}
+.tweet,.root,.p-author{zoom:1}
+.root,.tweet,.footer,.detail-expander,.header,.timeline{position:relative}
+
+
+
+
+.p-author a,.e-entry-title,.cards-base h3,.cards-base .cards-content p{line-height:18px}
+.e-entry-title a{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+.timeline{margin-bottom:10px;background-color:#fff;border-radius:5px}
+.timeline .stream{position:relative;width:100%;overflow-x:hidden;overflow-y:scroll}
+.timeline.pending-scroll-in .stream .h-feed{-webkit-transition:margin-top .5s ease-out;-moz-transition:margin-top .5s ease-out;-o-transition:margin-top .5s ease-out;transition:margin-top .5s ease-out}
+
+
+.tweet{padding:12px 12px 10px 69px;border-width:0 0 1px}
+
+.header{_float:left;_clear:left}
+.header .avatar{position:absolute;top:0;left:-57px;width:48px;height:48px;background:#fff;border-radius:4px}
+.permalink{position:relative;z-index:50;float:right;margin-top:2px;_clear:right}
+.tweet .e-entry-title{margin:0 5px 0 0;overflow:hidden;clear:both;word-wrap:break-word;white-space:pre-wrap}
+
+.tweet-actions{position:absolute;_position:static;right:0;bottom:1px;_float:right;background:#fff;visibility:hidden;_visibility:visible;box-shadow:0 0 10px 5px #fff}
+.tweet-actions li{_display:inline;float:left}
+.tweet-actions a i{margin:1px 0 0 8px;*margin:1px 0 0 3px;overflow:hidden}
+.tweet:hover .tweet-actions,.tweet:focus .tweet-actions,.expanded .tweet-actions{visibility:visible}
+.tweet .tweet-actions a,.tweet .tweet-actions a b,.tweet .tweet-actions a i,.tweet .tweet-actions li{cursor:pointer;outline:0}
+.twt-tweet .tweet-actions .ic-retweet{margin-top:1px}
+.footer{min-height:16px;padding-top:1px;margin-top:2px;overflow:hidden;border-width:0;-webkit-transition:margin-top .2s ease-out,padding-top .2s ease-out;-moz-transition:margin-top .2s ease-out,padding-top .2s ease-out;-o-transition:margin-top .2s ease-out,padding-top .2s ease-out;transition:margin-top .2s ease-out,padding-top .2s ease-out}
+.expanded .footer{padding-top:11px;margin-top:10px;border-width:1px 0 0}
+.expand,.p-geo{_display:inline;float:left}
+.stats-wide,.stats-narrow,.brand{display:none;margin-left:.3em;border-width:0}
+.expanded .stats-wide{display:inline-block;margin-top:-2px}
+.stats span{display:inline-block;margin-right:3px;text-transform:uppercase}
+.stats strong{font-weight:bold}
+.
+.

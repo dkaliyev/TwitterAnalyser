@@ -1,18 +1,21 @@
 <html>
 	<head>
-		<link rel="stylesheet" type="text/css" href="{{url_for('static', filename='twitter.css')}}">
-		<link rel="stylesheet" type="text/css" href="{{url_for('static', filename='jquery-ui.css')}}">
-		<link rel="stylesheet" type="text/css" href="{{url_for('static', filename='style.css')}}">
-		<link rel="stylesheet" type="text/css" href="{{url_for('static', filename='bootstrap.css')}}">
+	<link rel="stylesheet" type="text/css" href="/css/bootstrap.css">
+		<link rel="stylesheet" type="text/css" href="/css/twitter.css">
+		<link rel="stylesheet" type="text/css" href="/css/jquery-ui.css">
+		<link rel="stylesheet" type="text/css" href="/css/style.css">
 
-		<script type="text/javascript" src="{{url_for('static', filename='jquery-1.11.1.min.js')}}"></script>
-		<script type="text/javascript" src="{{url_for('static', filename='jquery-ui.js')}}"></script>
-		<script type="text/javascript" src="{{url_for('static', filename='jquery.ui-contextmenu.js')}}"></script>
-		<script type="text/javascript" src="{{url_for('static', filename='jquery.bpopup.min.js')}}"></script>
-		<script type="text/javascript" src="{{url_for('static', filename='bootstrap.js')}}"></script>
+		<script type="text/javascript" src="/js/jquery-1.11.1.min.js"></script>
+
+		<script type="text/javascript" src="/js/jquery-ui.js"></script>
+		<script type="text/javascript" src="/js/jquery.ui-contextmenu.js"></script>
+		<script type="text/javascript" src="/js/jquery.bpopup.min.js"></script>
+		<script type="text/javascript" src="/js/bootstrap.js"></script>
+		<!--<script type="text/javascript" src="\js\utils.js"></script>-->
 		
 		
-		<script type="text/javascript" src="{{url_for('static', filename='knockout-3.1.0.js')}}"></script>
+		
+		<script type="text/javascript" src="/js/knockout-3.1.0.js"></script>
 
 		
 	</head>
@@ -37,14 +40,85 @@
 			}
 
             $(document).ready(function () {
+
+
+
+
+var hidWidth;
+var scrollBarWidths = 40;
+
+ widthOfList = function(){
+  var itemsWidth = 0;
+  $('.list li').each(function(){
+    var itemWidth = $(this).outerWidth();
+    itemsWidth+=itemWidth;
+  });
+  return itemsWidth;
+};
+
+var widthOfHidden = function(){
+  return (($('.wrapper').outerWidth())-widthOfList()-getLeftPosi())-scrollBarWidths;
+};
+
+var getLeftPosi = function(){
+  return $('.list').position().left;
+};
+
+reAdjust = function(){
+
+  if (($('.wrapper').outerWidth()) < widthOfList()+50) {
+    $('.scroller-right').show();
+  }
+  else {
+    $('.scroller-right').hide();
+  }
+  
+  if (getLeftPosi()<0) {
+    $('.scroller-left').show();
+  }
+  else {
+    $('.item').animate({left:"-="+getLeftPosi()+"px"},'slow');
+  	$('.scroller-left').hide();
+  }
+}
+
+
+
+$(window).on('resize',function(e){  
+  	reAdjust();
+});
+
+$('.scroller-right').click(function() {
+  
+  $('.scroller-left').fadeIn('slow');
+  $('.scroller-right').fadeOut('slow');
+  
+  $('.list').animate({left:"+="+widthOfHidden()+"px"},'slow',function(){
+
+  });
+});
+
+$('.scroller-left').click(function() {
+  
+	$('.scroller-right').fadeIn('slow');
+	$('.scroller-left').fadeOut('slow');
+  
+  	$('.list').animate({left:"-="+getLeftPosi()+"px"},'slow',function(){
+  	
+  	});
+});  
+
+
+
+
+
             	var classes_exp = /((\w)+,[ ]*(?=(\w)+))+/
             	var clsf_exp = /(\w)+/
             	obj["content"] = [];
             	$.getJSON( "http://127.0.0.1:5000/classification", function( data ) {
 				  classifications = data;
 				  currClass = classifications[0]["classification"];
-				  $('.'+currClass).css("display","block");
-	        	  $('.'+currClass).css("z-index",99999);
+				  
 				  classifications.push({"_id": "1", "classes": [{"_id":1, "name":"Add new"}], "classification": "Other"});
 					var viewModel = function(){
 						self = this,
@@ -52,13 +126,30 @@
 	        			self.categories= ko.observableArray(classifications),
 	        			self.cls_names = ko.observable(""),
 	        			self.clsf_name = ko.observable(""),
-	        			self.test = function(name){
+	        			self.renderedHandler = function(){
+	        				if ($('#myTab').children().length === self.categories().length) {
+	        					var id = $('#myTab').children()[0].getAttribute('id');
+	        					reAdjust();	
+	        					$('#'+id).addClass('active');
+													   
+ 							}
+	        			},
+	        			self.adjustHeight = function(id, classf){
+	        				var height = $('#'+id).height();
+	        				var child_height = $('#btn-gr-'+id+'-'+classf).height();
+	        				$('#btn-gr-'+id+'-'+classf).css('margin-top', (height-child_height)/2);
+	        			}
+	        			self.finishedClasses = function(){
+	        				$('.'+currClass).css("display","block");
+	        	 			$('.'+currClass).css("z-index",3333);
+	        			},
+	        			self.test = function(name) {
 	        				console.log('clicked');
-	        				$('.classf').removeClass("btn-primary");
-	        				$('#btn-'+name).addClass("btn-primary");
+	        				$('.classf').removeClass("active");
+	        				$('#btn-'+name).addClass("active");
 	        				$('.'+self.currentClass).css("display","none");
 	        				$('.'+name).css("display","block");
-	        				$('.'+name).css("z-index",99999);
+	        				$('.'+name).css("z-index",3333);
 	        				self.currentClass = name;
 	        			},
 	        			self.addNew = function(id, tweet_id){
@@ -72,14 +163,14 @@
 	        				}
 	        				else
 	        				{
-	        					$('.btn-'+tweet_id).removeClass("btn-primary");
+	        					$('.btn-'+tweet_id+'-'+id).removeClass("btn-primary");
 	        					$('#btn-'+tweet_id+'-'+id+'-'+this["_id"]).addClass("btn-primary");
 	        					console.log("Added "+this["name"]+" "+id);
 		        				//obj["content"].push({"clasfId":id, "classId":this["_id"], "text":$('#'+tweet_id).text(), "tweet_id":tweet_id});
 		        				if(obj1[tweet_id]==undefined)
 		        				obj1[tweet_id] = {};
 		        				obj1[tweet_id][id] = {"classId":this["_id"], "text":$('#'+tweet_id).text()};
-		        				$("#li"+tweet_id).css("background-color", "#FAFA4B")
+		        				//$("#li"+tweet_id).css("background-color", "#FAFA4B")
 	        				}
 	        				
 	        			},
@@ -97,11 +188,11 @@
 							    	for(var k in d){
 							    		if(d[k] != "None")
 							    		{
-							    			$("#li"+k).css("background-color", "#62FA5C");
+							    			//$("#li"+k).css("background-color", "#62FA5C");
 							    		}
 							    		else
 							    		{
-							    			$("#li"+k).css("background-color", "#F52727");
+							    			//$("#li"+k).css("background-color", "#F52727");
 							    		}
 							    	}
 							    });
@@ -175,72 +266,101 @@
 				  //console.log($(this).attr('href'));
 				  //$(this).tab('show')
 				});
+
+
             })
         </script>
 
-		<div class="col-md-9 twitter-timeline twitter-timeline-rendered" style="border: none; max-width: 100%; min-width: 180px; height:350">
-			<div class="row" style="margin-bottom:10px">
-				<div class="col-md-6 col-md-offset-6">
-					<div class="btn-group">
-						<!-- ko foreach: { data: categories, as: 'category' } -->
-							
-							  <button type="button" class="btn btn-default classf" data-bind="text: category.classification, attr: {id:'btn-'+category.classification}, click: $root.test.bind($data, category.classification)"></button>
-							
-						<!-- /ko -->
-					</div>
+		<div class="col-md-10 col-md-offset-1 twitter-timeline twitter-timeline-rendered" style="border: none; max-width: 100%; min-width: 180px; height:350;">
+			<nav class="navbar navbar-default navbar-static-top" role="navigation">
+			  <div class="row">
+				<div class="col-md-12">
+					<form class="navbar-form navbar-left" role="form" >
+  						<div class="form-group">
+  							<input type="text" class="form-control" placeholder="Include words" >
+  							<input type="text" class="form-control" placeholder="Exclude words">
+  							<input type="text" class="form-control" placeholder="Specific account" >
+  							<input type="text" class="form-control" placeholder="Category">
+  						</div>
+  						<button type="button" class="btn btn-primary btn-md" style="width:75px">Go</button>
+  					</form>
 				</div>
-			</div>
-			<div class="row">
+			 </div>
+			</nav>
+			
+			<div class="panel panel-default">
+				<div class="panel-body">
+					<div class="row" style="margin-bottom:10px">
 
-					<div class="root timeline ltr twitter-timeline not-touch twitter-timeline-rendered pending-scroll-in">
-						<div class="stream" style="height: 263px">
-							<ol class="h-feed">
-							{% for tweet in tweets %}
-								<li id="{{'li'+tweet.id|string}}" class="h-entry tweet myTweet hasmenu" data-tweet-id={{tweet.id}}>
-									<div class="row">
-										<div class="col-md-6">
-											<div class="header">
-												<a class="u-url permalink" href="https://twitter.com/{{tweet.screen_name}}/statuses/{{tweet.id}}">
-													<time pubdate class="dt-update">
-													<abbr title="minutes">{{tweet.date}}</abbr>	
-													</time>	 
-												</a>
-												<div class="h-card p-author">
-													<a class="u-url profile" href="https://twitter.com/{{tweet.screen_name}}">
-														<img class="u-photo avatar" src="{{tweet.ava}}">
-														<span class="full-name">
-															<span class="p-name customisable-highlight">{{tweet.name}}</span>
-															<span class="p-nickname">@<b>{{tweet.screen_name}}</b></span>
-														</span>
-													</a>
-												</div>
-											</div>
+						<div class="col-md-6 col-md-offset-6">
+							
+		  						<div class="scroller scroller-left"><i class="glyphicon glyphicon-chevron-left"></i></div>
+								  <div class="scroller scroller-right"><i class="glyphicon glyphicon-chevron-right"></i></div>
+								  <div class="wrapper">
 
-											<div class="e-entry-content">
-					    						<p id={{tweet.id}} class="e-entry-title">{{tweet.text}}</p>
-					  						</div>
-			  							</div>
-			  							<div class="col-md-6">
-			  								<div>
-												<!-- ko foreach: { data: categories, as: 'category' } -->
-													<div data-bind="attr:{class:category.classification}" style="position:absolute; top:0; left:0; display:none;">
-														<div class="btn-group">
-															<!-- ko foreach: { data: classes, as: 'item' } -->
-															  <button type="button" class="btn btn-default btn-{{tweet.id}}" data-bind="attr:{id:'btn-'+{{tweet.id}}+'-'+$parent._id+'-'+item._id}, text:item.name, click: $root.addNew.bind($data, $parent._id, {{tweet.id}})"></button>
-														  	<!-- /ko -->
-														</div>
-														
-													</div>
-												<!-- /ko -->
-											</div>
-			  							</div>
-				  					</div>	
-								</li>
-							{% endfor %}
-							</ol>
+									  <ul class="nav nav-tabs list" data-bind="foreach: { data: categories, afterRender: renderedHandler, as: 'category' }" id="myTab">
+									  	<li class="classf" data-bind="attr: {id:'btn-'+category.classification}, click: $root.test.bind($data, category.classification)"><a data-bind="text: category.classification"></a>
+
+									  	</li>
+									  	
+									  </ul>
+
+								</div>
 						</div>
 					</div>
+				</div>
+				<div class="panel-body">
+					<div class="row">
+							<div class="root timeline ltr twitter-timeline not-touch twitter-timeline-rendered pending-scroll-in">
+								<div class="stream" style="height: 263px">
+									<ol class="h-feed">
+									{% for tweet in tweets %}
+										<li id="{{'li'+tweet.id|string}}" class="tweet-li h-entry tweet myTweet hasmenu " data-tweet-id={{tweet.id}}>
+											<div class="row">
+												<div class="col-md-6">
+													<div class="header">
+														<a class="u-url permalink" href="https://twitter.com/{{tweet.screen_name}}/statuses/{{tweet.id}}" style="font-size:12px">
+															<time pubdate class="dt-update">
+															<abbr title="minutes">{{tweet.date}}</abbr>	
+															</time>	 
+														</a>
+														<div class="h-card p-author">
+															<a class="u-url profile" href="https://twitter.com/{{tweet.screen_name}}">
+																<img class="u-photo avatar" src="{{tweet.ava}}">
+																<span class="full-name">
+																	<span class="p-name customisable-highlight">{{tweet.name}}</span>
+																	<span class="p-nickname">@<b>{{tweet.screen_name}}</b></span>
+																</span>
+															</a>
+														</div>
+													</div>
 
+													<div class="e-entry-content" style="font-size:16px;">
+							    						<p id={{tweet.id}} class="e-entry-title">{{tweet.text}}</p>
+							  						</div>
+					  							</div>
+					  							<div class="col-md-6">
+					  								<div>
+														<!-- ko foreach: { data: categories, afterRender: finishedClasses, as: 'category' } -->
+															<div data-bind="attr:{class:category.classification}" style="position:absolute; top:0; left:0; display:none;">
+																<div class="btn-group" data-bind="attr: {id: 'btn-gr-'+{{tweet.id}}+'-'+category.classification}">
+																	<!-- ko foreach: { data: classes, afterRender: $root.adjustHeight.bind($data, {{tweet.id}}, category.classification), as: 'item' } -->
+																	  <button type="button" data-bind="attr:{class: 'btn btn-default btn-'+{{tweet.id}}+'-'+$parent._id, id:'btn-'+{{tweet.id}}+'-'+$parent._id+'-'+item._id}, text:item.name, click: $root.addNew.bind($data, $parent._id, {{tweet.id}})"></button>
+																  	<!-- /ko -->
+																</div>
+																
+															</div>
+														<!-- /ko -->
+													</div>
+					  							</div>
+						  					</div>	
+										</li>
+									{% endfor %}
+									</ol>
+								</div>
+							</div>
+					</div>
+				</div>
 			</div>
 			<button type="button" class="b-close c btn btn-default" data-bind="click:send"> Send </button>
 		</div>
@@ -290,5 +410,6 @@
 				</div>
 			   </fieldset></form>
 		</div>
+
 	</body>
 </html>
