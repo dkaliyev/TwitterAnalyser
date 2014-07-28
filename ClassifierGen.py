@@ -12,10 +12,12 @@ from nltk.tokenize.regexp import wordpunct_tokenize
 from nltk.classify.naivebayes import NaiveBayesClassifier
 from time import sleep
 from nltk.corpus import stopwords
+import gc
 
 db = {}
 tweets_collection = {}
 classifications_collection = {}
+
 global_count = {}
 
 def connect(db_name, tweets_collection_name, classification_collection_name):
@@ -30,6 +32,20 @@ def start():
     global classifications_collection, tweets_collection, global_count
     sw = stopwords.words('english')
     thr = 5
+    refactored_tweets = {}
+    records = tweets_collection.find()
+    for record in records:
+        tweet = record['text']
+        tmp_classifiers = record['classifiers']
+        for clasfId, classId in tmp_classifiers.iteritems():
+            if clasfId not in refactored_tweets.keys():
+                refactored_tweets[clasfId] = []
+            refactored_tweets[clasfId].append({'text': tweet, 'classId':classId})
+    
+    records = None
+
+    gc.collect()    
+
     for classification in classifications_collection.find():
         tweets = []
         classification_name = classification['classification']
@@ -37,19 +53,26 @@ def start():
         
         classes = classification['classes']
         
-        records = tweets_collection.find({"clasfId":classification_id})
-        records_count = records.count()
+        #records = tweets_collection.find({"clasfId":classification_id})
+
+        records = []
+        try:
+            records = refactored_tweets[classification_id]
+        except KeyError:
+            print "No tweets for classification ", classification_name
+            continue
+        records_count = len(records)
         print classification_name, records_count
 
         if classification_id in global_count.keys():
-            if int(records.count()/thr)>global_count[classification_id]:
+            if int(records_count/thr)>global_count[classification_id]:
                 print "Exceeded threshold. Training started"
                 for record in records:
                     tweet = record['text']
                     class_id = record['classId']
                     class_label = get_class_label(class_id, classes)
                     feats = features_from_tweet(tweet, class_label, word_indicator, stopwords=sw)
-                    print feats
+                    
                     tweets.append(feats)
                 classifier = NaiveBayesClassifier.train(tweets)
                 f = open("%s.pickle"%classification_name, 'wb')
@@ -67,7 +90,7 @@ def start():
                     class_id = record['classId']
                     class_label = get_class_label(class_id, classes)
                     feats = features_from_tweet(tweet, class_label, word_indicator, stopwords=sw)
-                    print feats
+                    
                     tweets.append(feats)
                 classifier = NaiveBayesClassifier.train(tweets)
                 f = open("%s.pickle"%classification_name, 'wb')
@@ -106,7 +129,7 @@ def features_from_tweet(tweet, label, extractor, **kwargs):
     return (features, label)
 
 if __name__ == "__main__":
-    connect("classification", "tweets", "classifications")
+    connect("classification", "tweets_test1", "classifications")
     while True: 
         start()
         sleep(10)

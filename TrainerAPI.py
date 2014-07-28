@@ -20,6 +20,7 @@ from flask import make_response, request, current_app
 from functools import update_wrapper
 import arrow
 from datetime import timedelta
+import urllib2
 
 
 
@@ -30,9 +31,10 @@ mongo = PyMongo(app, config_prefix='MONGO2')
 
 tweets_fields = set(['clasfId', 'classId', 'text', 'tweet_id'])
 classification_fields = set(['classification', 'classes'])
-global_ids = {}
+search_fields = set(['include', 'exclude', 'count', 'categories', 'screen_name'])
+global_ids = {} # used to globally maintain list of ids
 classifier = None
-mode = 1 # 0:online, 1:offline
+mode = 0 # 0:online, 1:offline
 global_tweets = []
 
 class MyTweet(dict):
@@ -43,12 +45,12 @@ auth.set_access_token('2464862775-0qoQdD0tSR9CIs95ePK3Rrdn5fDa8VHSu29UJWa', 'dl4
 api = tweepy.API(auth)
 
 
-#tweets = api.home_timeline()
-#user = api.get_user('goodnews')
-
 def crossdomain(origin=None, methods=None, headers=None,
                 max_age=21600, attach_to_all=True,
                 automatic_options=True):
+    """
+        Required for cross domain requests
+    """
     if methods is not None:
         methods = ', '.join(sorted(x.upper() for x in methods))
     if headers is not None and not isinstance(headers, basestring):
@@ -87,43 +89,55 @@ def crossdomain(origin=None, methods=None, headers=None,
         return update_wrapper(wrapped_function, f)
     return decorator
 
-@app.route("/", methods=["GET"])
+@app.route("/", methods=["GET", "POST"])
 def index():
     tweets = []
-    if not mode:
-        try:
-            #for status in tweepy.Cursor(api.user_timeline, screen_name='goodnews', include_rts=False, count=5).items():
-            statuses = tweepy.Cursor(api.user_timeline, screen_name='hmvtweets', include_rts=False, count=30).items(30)
-
-            for status in statuses:
-                #print "Getting"
-                d = MyTweet()
-                #print "Created class inst"
-                #print tweets.append(status)
-                #print status._json['id']
-                setattr(d, "id", status._json['id'])
-                #setattr(d, "id", 7549804)
-                #print "set first attr", d.id
-                setattr(d, "screen_name", status._json["user"]["screen_name"])
-                setattr(d, "name",status._json["user"]["name"])
-                setattr(d, "text", status._json["text"])
-                setattr(d, "ava", status._json["user"]["profile_image_url_https"])
-                setattr(d, "date", arrow.get(mktime(strptime(status._json["created_at"],"%a %b %d %H:%M:%S +0000 %Y"))).humanize())
-                #setattr(d, "text", "test status")
-                tweets.append(d)
-        except tweepy.TweepError as err:
-                print err.str()
+    data = {}
+    if request.method == "GET":
+        if not mode:
+            data = json.load(urllib2.urlopen('http://cp.nowtrendin.com/search/for_tweets/?count=10&categories=corporate/hilco'))
+        else:
+            print "Offline mode"
+            global global_tweets
+            tweets = global_tweets
     else:
-        print "Offline mode"
-        global global_tweets
-        tweets = global_tweets
+        params = request.form
+        q_keys = params.keys()
+        # check form parameter names
+        if len(q_keys)!=len(search_fields) or len(search_fields.intersection(q_keys)) != len(search_fields):
+            return Response(json.dumps({"Status": "1", "Error":"The keys do not match, please try again"}), mimetype='application/json')
+        # construct url parameters string
+        param_str = "?"
+        for key, value in params.iteritems():
+            param_str+= "%s=%s&" % (key, value)
+        trimmed_str = param_str[:len(param_str)-1]
+               
+        data = json.load(urllib2.urlopen('http://cp.nowtrendin.com/search/for_tweets/%s' % trimmed_str))
+
+    # create tweets list    
+    for key, value in data.iteritems():
+        d = MyTweet()
+
+        setattr(d, "id", key)
+
+        setattr(d, "screen_name", value["screen_name"])
+        setattr(d, "name",value["real_name"])
+        setattr(d, "text", value["tweet"])
+        setattr(d, "ava", value["profile_image_url"])
+        setattr(d, "created_at", value["created_at"])
+        setattr(d, "date", value["time_since"])
+
+        tweets.append(d)
     classifications = get_classifications()
     global_ids.update(get_ids(classifications))
-    #return Response(json.dumps(tweets),  mimetype='application/json')
+
     return render_template("ClientSideTweet.html", tweets=tweets, classifications=classifications)
 
 
 def get_classifications():
+    """
+        Get classifications from database.
+    """
     classifications = []
     clfs = mongo.db.classifications.find({}, {"dateCreated":0})
     for clf in clfs:
@@ -137,6 +151,9 @@ def get_classifications():
     return classifications
 
 def get_ids(classifications):
+    """
+        Extract ids only. Result object is in form: {classification_id: [class1_id, class2_id, ...]}
+    """
     ids = {}
     for classification in classifications:
         tmp = []
@@ -149,8 +166,8 @@ def get_ids(classifications):
 @crossdomain(origin="*")    
 def classification():
     """
-    Retrieve or create new classification. If method is GET, return all available 
-    classifications. If method is POST, create new classification and return its ID
+        Retrieve or create new classification. If method is GET, return all available 
+        classifications. If method is POST, create new classification and return its ID
     """
     global global_ids
     if request.method == 'GET':
@@ -164,20 +181,19 @@ def classification():
             data = request.get_json()
             d_keys = set(data.keys())
             if len(d_keys)!=len(classification_fields) or len(classification_fields.intersection(d_keys)) != len(classification_fields):
-                return Response(json.dumps({"Error":"The keys do not match, please try again"}), mimetype='application/json')
+                return Response(json.dumps({"status":"1", "Error":"The keys do not match, please try again"}), mimetype='application/json')
             if len(data['classes']) == 0:
-                return Response(json.dumps({"Error":"You must provide at least 2 classes"}), mimetype='application/json')
+                return Response(json.dumps({"status":"1", "Error":"You must provide at least 2 classes"}), mimetype='application/json')
             current_clsfs = get_classifications()
-            for clsf in current_clsfs:
+            for clsf in current_clsfs: 
                 if clsf['classification'] == data['classification']:
-                    return Response(json.dumps({"id":"-1", "Error":"Classification already exists"}), mimetype='application/json')
+                    return Response(json.dumps({"status":"1", "Error":"Classification already exists"}), mimetype='application/json')
             tmp['dateCreated'] = strftime("%Y-%m-%dT%H:%M:%SZ", localtime())
             tmp['classification'] = data['classification']
             tmp['classes'] = []
             tmp_classes = []
             for _class in data['classes']:
                 tmp['classes'].append({'_id':ObjectId(), 'name':_class})
-                #tmp_classes.append({'_id':str(ObjectId()), 'name':_class})
             _id = mongo.db.classifications.insert(tmp)
             if _id != None:
                 _id = str(_id)
@@ -186,86 +202,122 @@ def classification():
                 tmp["_id"] = _id
                 tmp_classes = [{"_id":str(_class['_id']), "name":_class['name']} for _class in tmp['classes']]
                 tmp['classes'] = tmp_classes
-                return Response(json.dumps(tmp), mimetype='application/json')
+                return Response(json.dumps({"status":"0", "content":tmp}), mimetype='application/json')
             else:
-                return Response(json.dumps({"id":"-1", "Error":"Cant insert new into database"}), mimetype='application/json')
+                return Response(json.dumps({"status":"1", "Error":"Cant insert new classification into database"}), mimetype='application/json')
         
-                
 
 @app.route('/trainer', methods=['POST'])
 def trainer():
     global global_ids
     """
-    Assign class to the tweet and save it to database
+        Assign class to the tweet and save it to database
     """
     
     if global_ids == {}:
         classifications = get_classifications()
         global_ids = copy.deepcopy(get_ids(classifications))
         if global_ids == {}:
-            return Response(json.dumps({"Error":"Please first create class!"}), mimetype='application/json')
+            return Response(json.dumps({"status":"1", "Error":"Please first create class!"}), mimetype='application/json')
     keys = global_ids.keys()
     tmp = {}
-    ids = []
+    ids = {}
     res = request.get_json()
-    print res
     if "content" not in res.keys():
-        return Response(json.dumps({"id":"-1", "Error":"Invalid format"}), mimetype='application/json')
-    content = res['content']
-    for data in content:
-        print data
-        d_keys = set(data.keys())
-        if len(d_keys)!=4 or len(tweets_fields.intersection(d_keys)) != len(tweets_fields):
-            return Response(json.dumps({"Error":"The keys do not match, please try again"}))
-        if data['clasfId'] not in keys:
-            return Response(json.dumps({"Error":"Cannot match classification id"}))
-        if data['classId'] not in global_ids[data['clasfId']]:
-            print global_ids[data['clasfId']]
-            return Response(json.dumps({"Error":"Cannot match class id"}))
-        for key, value in data.iteritems():
-            tmp[key] = value
-        tmp['date'] = strftime("%Y-%m-%dT%H:%M:%SZ", localtime())
-        tmp['_id'] = ObjectId()
-        _id = mongo.db.tweets.insert(tmp)
-        if _id != None:
-            _id = str(_id)
-            ids.append({data["tweet_id"]:_id})
-            #
-        else:
-            ids.append({data["tweet_id"]:"None"})
-            #return Response(json.dumps({"id":"-1", "Error":"Could not insert into database"}), mimetype='application/json')
+        return Response(json.dumps({"status":"1", "Error":"Invalid format"}), mimetype='application/json')
 
-    return Response(json.dumps({"status":1, "ids":ids}), mimetype='application/json')        
+    content = res['content']
+    try:
+        tmp["tweet_id"] = content["tweet_id"]
+        tmp["classf_id"] = content["classf_id"]
+        tmp["class_id"] = content["class_id"]
+        tmp["text"] = content["text"]
+    except KeyError:
+        return Response(json.dumps({"status":"1", "Error":"Invalid format"}), mimetype='application/json')
+
+    if tmp['classf_id'] not in keys:
+            return Response(json.dumps({"status":"1", "Error":"Cannot match classification id"}))
+    if tmp['class_id'] not in global_ids[tmp['classf_id']]:
+        return Response(json.dumps({"status":"1", "Error":"Cannot match class id"}))    
+    ids[tmp['tweet_id']] = tmp['class_id']    
+    tmp['last_updated'] = strftime("%Y-%m-%dT%H:%M:%SZ", localtime())    
+    tweets = list(mongo.db.tweets_test1.find({'tweet_id':tmp['tweet_id']}))
+    if tweets == []:
+        _id = mongo.db.tweets_test1.insert({'_id':ObjectId(), 'tweet_id':tmp['tweet_id'], 'classifiers':{tmp['classf_id']:tmp['class_id']}, 'last_updated':tmp['last_updated'], 'text':tmp['text']})   
+        if _id != None:
+            ids[tmp['tweet_id']] = tmp['class_id']
+        else:
+            ids[tmp['tweet_id']] = "None"
+    else:
+        classifiers = tweets[0]['classifiers']
+        classifiers[tmp['classf_id']] = tmp['class_id']
+        mongo.db.tweets_test1.update({'tweet_id':tmp['tweet_id']}, {"$set":{'classifiers': classifiers, 'last_updated':tmp['last_updated']}})
+
+    return Response(json.dumps({"status":0, "ids":ids}), mimetype='application/json')
+
+
+@app.route('/clear', methods=['POST'])
+def clear():
+    global global_ids
+    """
+        Remove specified classification from a tweet
+    """
+    
+    if global_ids == {}:
+        classifications = get_classifications()
+        global_ids = copy.deepcopy(get_ids(classifications))
+        if global_ids == {}:
+            return Response(json.dumps({"status":"1", "Error":"Please first create class!"}), mimetype='application/json')
+    keys = global_ids.keys()
+    tmp = {}
+    ids = {}
+    res = request.get_json()
+    if "content" not in res.keys():
+        return Response(json.dumps({"status":"1", "Error":"No content"}), mimetype='application/json')
+
+    content = res['content']
+    try:
+        tmp["tweet_id"] = content["tweet_id"]
+        tmp["classf_id"] = content["classf_id"]
+    except KeyError:
+        return Response(json.dumps({"status":"1", "Error":"Invalid format"}), mimetype='application/json')
+
+    if tmp['classf_id'] not in keys:
+            return Response(json.dumps({"status":"1", "Error":"Cannot match classification id"}))  
+    
+    tmp['last_updated'] = strftime("%Y-%m-%dT%H:%M:%SZ", localtime())    
+    tweets = list(mongo.db.tweets_test1.find({'tweet_id':tmp['tweet_id']}))
+    if tweets == []:
+        return Response(json.dumps({"status":"1", "Error":"Tweet doesnt exist"}), mimetype='application/json')
+    else:
+        classifiers = dict(tweets[0]['classifiers'])
+        if tmp['classf_id'] in classifiers.keys():
+            del classifiers[tmp['classf_id']]
+            mongo.db.tweets_test1.update({'tweet_id':tmp['tweet_id']}, {"$set":{'classifiers': classifiers, 'last_updated':tmp['last_updated']}})
+            return Response(json.dumps({"status":0}), mimetype='application/json')
+        else:
+            return Response(json.dumps({"status":1, "Error": "IDs dont match"}), mimetype='application/json')        
+
 @app.route("/classifier", methods=["POST"])
 def main():
-    global classifier
+    """
+        Classify a tweet
+    """
     data = request.get_json()
     try:
         tweet = data['tweet']
         classification = data['classification']
     except KeyError:
-        return Response(json.dumps({"Error":"The keys do not match, please try again"}), mimetype='application/json')
-    if classifier == None:
-        classifier = {}
-        f = {}
-        try:
-            f = open("%s.pickle" % classification)
-        except IOError:
-            return Response(json.dumps({"Status": 1, "Error":"Cant open the file"}), mimetype='application/json')     
-        classifier[classification] = pickle.load(f)
-        tweet = word_indicator(tweet)
-        result = classifier[classification].classify(tweet)
-        return Response(json.dumps({"Status": 0, "Result":result}), mimetype='application/json')
-    else:
-        if classification not in classifier.keys():
-            try:
-                f = open("%s.pickle" % classification)
-            except IOError:
-                return Response(json.dumps({"Status": 1, "Error":"Cant open the file"}),mimetype='application/json')     
-            classifier[classification] = pickle.load(f)
-        tweet = word_indicator(tweet)
-        result = classifier[classification].classify(tweet)
-        return Response(json.dumps({"Status": 0, "Result":result}), mimetype='application/json')
+        return Response(json.dumps({"status":"1", "Error":"The keys do not match, please try again"}), mimetype='application/json')
+    try:
+        f = open("%s.pickle" % classification)
+    except IOError:
+        return Response(json.dumps({"Status": 1, "Error":"Cant open the file"}), mimetype='application/json')
+    classifier = pickle.load(f)
+    _tweet = word_indicator(tweet)
+    result = classifier.classify(_tweet)
+    return Response(json.dumps({"Status": 0, "Result":result}), mimetype='application/json')
+
     
 if __name__ == '__main__':
     if mode:

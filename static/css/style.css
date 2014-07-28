@@ -2,6 +2,17 @@ body {
     font-family: "Trebuchet MS", "Helvetica", "Arial",  "Verdana", "sans-serif";
 }
 
+nav.navbar {
+  margin-bottom: 40px;
+  padding-top: 10px;
+  padding-bottom: 10px;
+}
+
+.active {
+  border-style: none; 
+}
+
+
 #element_to_pop_up { 
     background-color:#fff;
     border-radius:15px;
@@ -18,14 +29,24 @@ body {
 
 .classf {
     cursor: pointer;
+    text-align:center;
+    height: 50px;
+    border-radius: 5px 5px 5px 5px;
 }
 
+.innerText {
+  border-radius: 5px 5px 5px 5px;
+}
 
+.nav > li > a {
+  background-color: white;
+  padding-left: 25px;
+}
 .wrapper {
     position:relative;
     margin:0 auto;
     overflow:hidden;
-    height:50px;
+    height:70px;
 
 }
 
@@ -36,7 +57,12 @@ body {
     min-width: 300px;
     margin-left:12px;
     margin-top:0px;
-    height: 42px;
+    height: 70px;
+    overflow-x: scroll;
+    overflow-y: hidden; 
+    white-space: nowrap;
+    width: 100%;
+
 }
 
 .list.classf{
@@ -48,14 +74,25 @@ body {
     cursor:-webkit-grab;
     color:#000;
     vertical-align:middle;
+    border-radius: 8px 8px 0 0;
+}
+
+.active, .classf:hover {
+  background-color: #66ACE8;
 }
 
 .nav-tabs > li.active > a, .nav-tabs >li.active > a:hover, .nav-tabs > li.active > a:focus {
     background-color: #66ACE8;
+    border: 1px solid gray;
 }
 
 .nav-tabs > li > a {
-    border-radius: 8px 8px 0 0;
+    border-radius: 14px 14px 0 0;
+    margin-right: 0;
+}
+
+.panel {
+  border-color: transparent;
 }
 
 .scroller {
@@ -64,7 +101,7 @@ body {
   display:none;
   padding:7px;
   padding-top:11px;
-  white-space:no-wrap;
+  white-space:nowrap;
   vertical-align:middle;
   background-color:#fff;
 }
@@ -72,9 +109,11 @@ body {
 .scroller-right{
   float:right;
   background-color: #fff;
+  width: 5%;
 }
 
 .scroller-left {
     background-color: #fff;
+    width: 5%;
   float:left;
 }

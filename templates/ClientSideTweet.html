@@ -4,6 +4,8 @@
 		<link rel="stylesheet" type="text/css" href="/css/twitter.css">
 		<link rel="stylesheet" type="text/css" href="/css/jquery-ui.css">
 		<link rel="stylesheet" type="text/css" href="/css/style.css">
+		<link rel="stylesheet" type="text/css" href="/css/toastr.css">
+		<link rel="stylesheet" type="text/css" href="/css/jquery.mCustomScrollbar.css">
 
 		<script type="text/javascript" src="/js/jquery-1.11.1.min.js"></script>
 
@@ -11,9 +13,8 @@
 		<script type="text/javascript" src="/js/jquery.ui-contextmenu.js"></script>
 		<script type="text/javascript" src="/js/jquery.bpopup.min.js"></script>
 		<script type="text/javascript" src="/js/bootstrap.js"></script>
-		<!--<script type="text/javascript" src="\js\utils.js"></script>-->
-		
-		
+		<script type="text/javascript" src="/js/toastr.js"></script>
+		<script type="text/javascript" src="/js/jquery.mCustomScrollbar.concat.min.js"></script>		
 		
 		<script type="text/javascript" src="/js/knockout-3.1.0.js"></script>
 
@@ -41,121 +42,97 @@
 
             $(document).ready(function () {
 
-
-
-
-var hidWidth;
-var scrollBarWidths = 40;
-
- widthOfList = function(){
-  var itemsWidth = 0;
-  $('.list li').each(function(){
-    var itemWidth = $(this).outerWidth();
-    itemsWidth+=itemWidth;
-  });
-  return itemsWidth;
-};
-
-var widthOfHidden = function(){
-  return (($('.wrapper').outerWidth())-widthOfList()-getLeftPosi())-scrollBarWidths;
-};
-
-var getLeftPosi = function(){
-  return $('.list').position().left;
-};
-
-reAdjust = function(){
-
-  if (($('.wrapper').outerWidth()) < widthOfList()+50) {
-    $('.scroller-right').show();
-  }
-  else {
-    $('.scroller-right').hide();
-  }
-  
-  if (getLeftPosi()<0) {
-    $('.scroller-left').show();
-  }
-  else {
-    $('.item').animate({left:"-="+getLeftPosi()+"px"},'slow');
-  	$('.scroller-left').hide();
-  }
-}
-
-
-
-$(window).on('resize',function(e){  
-  	reAdjust();
-});
-
-$('.scroller-right').click(function() {
-  
-  $('.scroller-left').fadeIn('slow');
-  $('.scroller-right').fadeOut('slow');
-  
-  $('.list').animate({left:"+="+widthOfHidden()+"px"},'slow',function(){
-
-  });
-});
-
-$('.scroller-left').click(function() {
-  
-	$('.scroller-right').fadeIn('slow');
-	$('.scroller-left').fadeOut('slow');
-  
-  	$('.list').animate({left:"-="+getLeftPosi()+"px"},'slow',function(){
-  	
-  	});
-});  
-
-
-
-
-
             	var classes_exp = /((\w)+,[ ]*(?=(\w)+))+/
             	var clsf_exp = /(\w)+/
             	obj["content"] = [];
             	$.getJSON( "http://127.0.0.1:5000/classification", function( data ) {
-				  classifications = data;
-				  currClass = classifications[0]["classification"];
+				  _classifications = data;
+				  if(_classifications != [])
+				  	currClass = _classifications[0]["classification"];
+				  else
+				  	currClass = "Other";
 				  
-				  classifications.push({"_id": "1", "classes": [{"_id":1, "name":"Add new"}], "classification": "Other"});
+				 				  
+				  _classifications.push({"_id": "1", "classes": [{"_id":1, "name":"Add new"}], "classification": "Other"});
 					var viewModel = function(){
 						self = this,
 						self.currentClass = currClass,
-	        			self.categories= ko.observableArray(classifications),
+						self.currentInd = 1,
+						self.maxWidth = 0,
+	        			self.classifications= ko.observableArray(_classifications),
 	        			self.cls_names = ko.observable(""),
+	        			self.indexes = ko.observable(self.classifications().length+1),
 	        			self.clsf_name = ko.observable(""),
+	        			self.left_offset = 0,
 	        			self.renderedHandler = function(){
-	        				if ($('#myTab').children().length === self.categories().length) {
+	        				if ($('#myTab').children().length === self.classifications().length) {
 	        					var id = $('#myTab').children()[0].getAttribute('id');
-	        					reAdjust();	
+	        					$('.innerText').each(function(){
+	        						$(this).outerWidth(self.maxWidth);
+	        					});
 	        					$('#'+id).addClass('active');
+	        					self.currentInd = $('#'+id).css('z-index');
 													   
  							}
 	        			},
+	        			self.renderCategory = function(classification){
+	        				if (parseInt($(classification).css('width').replace(/\D+/g, ''))>self.maxWidth)
+	        					self.maxWidth = parseInt($(classification).css('width').replace(/\D+/g, ''))
+	        			},
 	        			self.adjustHeight = function(id, classf){
-	        				var height = $('#'+id).height();
+	        				var height = $('#row-'+id).height();
 	        				var child_height = $('#btn-gr-'+id+'-'+classf).height();
 	        				$('#btn-gr-'+id+'-'+classf).css('margin-top', (height-child_height)/2);
-	        			}
+	        			},
+	        			self.adjustHeightClear = function(id, classf){
+	        				var height = $('#row-'+id).height();
+	        				var child_height = $('#btn-clear-'+id+'-'+classf).height();
+	        				$('#btn-clear-'+id+'-'+classf).css('margin-top', (height-child_height)/2);
+	        			},
 	        			self.finishedClasses = function(){
 	        				$('.'+currClass).css("display","block");
 	        	 			$('.'+currClass).css("z-index",3333);
+	        	 			$('.btn-clear-'+currClass).css("display","block");
+	        	 			$('.btn-clear-'+currClass).css("z-index",3333);
 	        			},
-	        			self.test = function(name) {
-	        				console.log('clicked');
+	        			self.selectClassification = function(name) {
 	        				$('.classf').removeClass("active");
 	        				$('#btn-'+name).addClass("active");
 	        				$('.'+self.currentClass).css("display","none");
 	        				$('.'+name).css("display","block");
 	        				$('.'+name).css("z-index",3333);
+
+	        				$('#btn-'+self.currentClass).css('z-index', self.currentInd);
+	        				self.currentInd = $('#btn-'+name).css('z-index');
+	        				$('#btn-'+name).css('z-index', 3333);
 	        				self.currentClass = name;
 	        			},
-	        			self.addNew = function(id, tweet_id){
+	        			self.clearClass = function(tweet_id, classf_id){
+	        				$('.btn-'+tweet_id+'-'+classf_id).removeClass("btn-success");
+	        				$('#btn-clear-id-'+tweet_id+'-'+classf_id).prop('disabled', true);
+	        				if(obj1[tweet_id]!=undefined){
+	        					$.ajax({
+								  type: "POST",
+								  contentType: "application/json; charset=utf-8",
+								  url: "http://127.0.0.1:5000/clear",
+								  data: JSON.stringify({"content":{'tweet_id':tweet_id, 'classf_id':classf_id}}),
+								  success: function (data) {
+								   if(data['status']==0)
+								   {
+								 		toastr.info('Cleared');
+								   }
+								 	else
+								 	{
+								 		toastr.error('There was an error');
+								 	}
+								  },
+								  dataType: "json"
+								});
+	        				}
+	        			}, 
+	        			self.addNew = function(id, _tweet_id){
 	        				if(id=="1")
 	        				{
-	        					console.log("Add new");
 	        					s = $('#element_to_pop_up').bPopup({modalClose: false, onClose: function() {
 					    	self.cls_names("");
 					    	self.clsf_name("");
@@ -163,50 +140,54 @@ $('.scroller-left').click(function() {
 	        				}
 	        				else
 	        				{
-	        					$('.btn-'+tweet_id+'-'+id).removeClass("btn-primary");
-	        					$('#btn-'+tweet_id+'-'+id+'-'+this["_id"]).addClass("btn-primary");
-	        					console.log("Added "+this["name"]+" "+id);
-		        				//obj["content"].push({"clasfId":id, "classId":this["_id"], "text":$('#'+tweet_id).text(), "tweet_id":tweet_id});
+	        					var tweet_id = _tweet_id;
 		        				if(obj1[tweet_id]==undefined)
 		        				obj1[tweet_id] = {};
 		        				obj1[tweet_id][id] = {"classId":this["_id"], "text":$('#'+tweet_id).text()};
-		        				//$("#li"+tweet_id).css("background-color", "#FAFA4B")
+		        				var to_send = {'tweet_id': tweet_id, 'classf_id':id, 'class_id':this["_id"], 'text':$('#'+tweet_id).text()};
+		        				$.ajax({
+								  type: "POST",
+								  contentType: "application/json; charset=utf-8",
+								  url: "http://127.0.0.1:5000/trainer",
+								  data: JSON.stringify({"content":to_send}),
+								  success: function (data) {
+								  		if(data['status']==0)
+								  		{
+									    	ids = data["ids"];
+									    
+									    	for(var k in ids){
+									    		if(ids[k] == "None")
+									    		{
+									    			$('.btn-'+k+'-'+id).removeClass("btn-success");
+									    			$('#btn-'+k+'-'+ids[k]).addClass("btn-danger");
+									    			toastr.error("There was an error", "Tweet was not added. Try again")
+									    		}
+									    		else
+									    		{
+									    			$('.btn-'+k+'-'+id).removeClass("btn-success");
+									    			$('#btn-'+k+'-'+ids[k]).addClass("btn-success");
+									    			$('#btn-clear-id-'+tweet_id+'-'+id).prop('disabled', false);
+									    			toastr.success("Tweet added successfully");
+									    		}
+									    	}
+								 		}
+								 		else
+								 		{
+								 			toastr.error(data['Error'], "There is an error");
+								 		}
+								  },
+								  dataType: "json"
+								});
 	        				}
 	        				
 	        			},
-	        			self.send= function(){
-		        			console.log("sending");
-		        			var to_send = obj_to_list(obj1);
-		        			$.ajax({
-							  type: "POST",
-							  contentType: "application/json; charset=utf-8",
-							  url: "http://127.0.0.1:5000/trainer",
-							  data: JSON.stringify({"content":to_send}),
-							  success: function (data) {
-							    ids = data["ids"];
-							    ids.forEach(function(d){
-							    	for(var k in d){
-							    		if(d[k] != "None")
-							    		{
-							    			//$("#li"+k).css("background-color", "#62FA5C");
-							    		}
-							    		else
-							    		{
-							    			//$("#li"+k).css("background-color", "#F52727");
-							    		}
-							    	}
-							    });
-							  },
-							  dataType: "json"
-							});
-		        		},
+	        			
 		        		self.addClassification= function(){
 		        			var tmp_clsf_name = self.clsf_name();
 		        			var m1 = tmp_clsf_name.match(clsf_exp);
 		        			var tmp_cls_names = self.cls_names();
 		        			var m2 = tmp_cls_names.match(classes_exp);
-		        			console.log(m1);
-		        			console.log(m2);
+
 		        			if(m1&&m2)
 		        			{
 		        				var to_send = 
@@ -216,17 +197,17 @@ $('.scroller-left').click(function() {
 								  url: "http://127.0.0.1:5000/classification",
 								  data: JSON.stringify({"classification": tmp_clsf_name, "classes":tmp_cls_names.split(",")}),
 								  success: function (data) {
-								    if(data['id']==-1)
+								    if(data['status']==1)
 								    {
-								    	console.log(data['Error']);
+								    	toastr.error(data['Error'], "There was a problem");
 								    }
 								    else
 								    {
-								    	other = self.categories.pop();
-								    	console.log(other);
-								    	self.categories.push(data);
-								    	self.categories.push(other);
-								    	console.log("done");
+								    	other = self.classifications.pop();
+								    	
+								    	self.classifications.push(data['content']);
+								    	self.classifications.push(other);
+								    	
 								    	$(document).contextmenu("replaceMenu", "#options");
 								    	s.close();
 								    }
@@ -237,6 +218,20 @@ $('.scroller-left').click(function() {
 		        			}
 		        				
 		        		}
+    				}
+
+    				ko.bindingHandlers.offsetHandler = {
+    					init: function(element, valueAccessor, allBindings){
+    						var value = valueAccessor();
+    						value(element);
+    					}
+    				}
+
+    				ko.bindingHandlers.adjustHeightClear = {
+    					init: function(element, valueAccessor, allBindings){
+    						var value = valueAccessor();
+    						value(element);
+	        			}
     				}
 
     				ko.applyBindings(new viewModel());
@@ -260,12 +255,30 @@ $('.scroller-left').click(function() {
                         return true;
                 });
 
-                $('.myClass').click(function (e) {
-				  //e.preventDefault();
-				  console.log("cl");
-				  //console.log($(this).attr('href'));
-				  //$(this).tab('show')
-				});
+				$('#Count').tooltip({"delay":{"show":500, "hide":100}});
+
+				
+
+				$('#search_btn').click(function(){
+					$.ajax({
+						  type: "POST",
+						  contentType: "application/json; charset=utf-8",
+						  url: "http://127.0.0.1:5000/",
+						  data: JSON.stringify({"include": $('#incl_words').val(), "exclude":$('#excl_words').val(), "count":$('#count').val(),
+						  						"screen_name":$('#account').val(), "categories":$('#category').val()}),
+						  success: function (data) {
+						    if(data['id']==-1)
+						    {
+						    	toastr.error(data['Error']);
+						    }
+						    else
+						    {
+						    	
+						    }
+						  },
+						  dataType: "json"
+						});
+					})
 
 
             })
@@ -275,48 +288,55 @@ $('.scroller-left').click(function() {
 			<nav class="navbar navbar-default navbar-static-top" role="navigation">
 			  <div class="row">
 				<div class="col-md-12">
-					<form class="navbar-form navbar-left" role="form" >
+					<form class="navbar-form navbar-left" role="form" method="POST">
   						<div class="form-group">
-  							<input type="text" class="form-control" placeholder="Include words" >
-  							<input type="text" class="form-control" placeholder="Exclude words">
-  							<input type="text" class="form-control" placeholder="Specific account" >
-  							<input type="text" class="form-control" placeholder="Category">
+  							<input type="text" class="form-control input-lg" placeholder="Include words" name="include">
+  							<input type="text" class="form-control input-lg" placeholder="Exclude words" name="exclude">
+  							<input type="text" class="form-control input-lg" placeholder="Specific account" name="screen_name">
+  							<input type="text" class="form-control input-lg" placeholder="Category" name="categories">
+  							<select class="form-control input-lg" name="count" required data-toggle="tooltip" id="Count" data-trigger="hover" title="Count" data-placement="bottom" >
+  								<option value="10">10</option>
+  								<option value="20">20</option>
+  								<option value="30">30</option>
+  								<option value="40">40</option>
+  								<option value="50">50</option>
+  								<option value="60">60</option>
+  								<option value="70">70</option>
+  							</select>
   						</div>
-  						<button type="button" class="btn btn-primary btn-md" style="width:75px">Go</button>
+  						<button type="submit" class="btn btn-primary btn-lg" style="width:75px" id="search_btn">Go</button>
   					</form>
 				</div>
 			 </div>
 			</nav>
 			
 			<div class="panel panel-default">
-				<div class="panel-body">
+				<div class="panel-body" style="border:0px solid gray">
 					<div class="row" style="margin-bottom:10px">
 
-						<div class="col-md-6 col-md-offset-6">
-							
-		  						<div class="scroller scroller-left"><i class="glyphicon glyphicon-chevron-left"></i></div>
-								  <div class="scroller scroller-right"><i class="glyphicon glyphicon-chevron-right"></i></div>
+						<div class="col-md-5 col-md-offset-7">
 								  <div class="wrapper">
 
-									  <ul class="nav nav-tabs list" data-bind="foreach: { data: categories, afterRender: renderedHandler, as: 'category' }" id="myTab">
-									  	<li class="classf" data-bind="attr: {id:'btn-'+category.classification}, click: $root.test.bind($data, category.classification)"><a data-bind="text: category.classification"></a>
+									  <div class="list" id="myTab">
+									  	<!-- ko foreach: { data: classifications, afterRender: renderedHandler, as: 'category' } -->
+									  	<div class="classf" data-bind="attr: {id:'btn-'+category.classification},  click: $root.selectClassification.bind($data, category.classification)" style="display:inline-block"><div style="display:table; height:100%;"><div class="innerText" data-bind="text: category.classification, offsetHandler: $root.renderCategory" style="border: 1px solid gray; vertical-align:middle; display:table-cell"></div></div>
 
-									  	</li>
-									  	
-									  </ul>
+									  	</div>
+									  	<!-- /ko -->
+									  </div>
 
 								</div>
 						</div>
 					</div>
 				</div>
-				<div class="panel-body">
+				<div class="panel-body" style="background-color:#EBF0EF; padding-left:30px">
 					<div class="row">
 							<div class="root timeline ltr twitter-timeline not-touch twitter-timeline-rendered pending-scroll-in">
-								<div class="stream" style="height: 263px">
+								<div class="stream" style="height: 500px">
 									<ol class="h-feed">
 									{% for tweet in tweets %}
-										<li id="{{'li'+tweet.id|string}}" class="tweet-li h-entry tweet myTweet hasmenu " data-tweet-id={{tweet.id}}>
-											<div class="row">
+										<li id="{{'li'+tweet.id|string}}" class="tweet-li h-entry tweet myTweet hasmenu " data-tweet-id='{{tweet.id}}'>
+											<div class="row" id="row-{{tweet.id}}">
 												<div class="col-md-6">
 													<div class="header">
 														<a class="u-url permalink" href="https://twitter.com/{{tweet.screen_name}}/statuses/{{tweet.id}}" style="font-size:12px">
@@ -336,21 +356,24 @@ $('.scroller-left').click(function() {
 													</div>
 
 													<div class="e-entry-content" style="font-size:16px;">
-							    						<p id={{tweet.id}} class="e-entry-title">{{tweet.text}}</p>
+							    						<p id='{{tweet.id}}' class="e-entry-title">{{tweet.text}}</p>
 							  						</div>
 					  							</div>
 					  							<div class="col-md-6">
 					  								<div>
-														<!-- ko foreach: { data: categories, afterRender: finishedClasses, as: 'category' } -->
-															<div data-bind="attr:{class:category.classification}" style="position:absolute; top:0; left:0; display:none;">
-																<div class="btn-group" data-bind="attr: {id: 'btn-gr-'+{{tweet.id}}+'-'+category.classification}">
-																	<!-- ko foreach: { data: classes, afterRender: $root.adjustHeight.bind($data, {{tweet.id}}, category.classification), as: 'item' } -->
-																	  <button type="button" data-bind="attr:{class: 'btn btn-default btn-'+{{tweet.id}}+'-'+$parent._id, id:'btn-'+{{tweet.id}}+'-'+$parent._id+'-'+item._id}, text:item.name, click: $root.addNew.bind($data, $parent._id, {{tweet.id}})"></button>
+														<!-- ko foreach: { data: classifications, afterRender: finishedClasses, as: 'category' } -->
+															
+																<div data-bind="attr: {class: 'btn-group '+category.classification, id: 'btn-gr-{{tweet.id}}'+'-'+category.classification}" style="position:absolute; top:0; left:10; display:none;">
+																	<!-- ko foreach: { data: classes, afterRender: $root.adjustHeight.bind($data, '{{tweet.id}}', category.classification), as: 'item' } -->
+																	  <button type="button" data-bind="attr:{class: 'btn btn-default btn-{{tweet.id}}'+'-'+$parent._id, id:'btn-{{tweet.id}}-'+item._id}, text:item.name, click: $root.addNew.bind($data, $parent._id, '{{tweet.id}}')"></button>
 																  	<!-- /ko -->
+
 																</div>
-																
-															</div>
+																<div style="position:relative; top:0; float:right; display:none;" data-bind="attr: {class: 'btn-clear-'+category.classification, id:'btn-clear-{{tweet.id}}-'+category.classification}, adjustHeightClear: $root.adjustHeightClear.bind($data, '{{tweet.id}}', category.classification)">	
+																<button type="button" class="btn btn-default" data-bind="attr: {id: 'btn-clear-id-{{tweet.id}}-'+category._id}, click: $root.clearClass.bind($data, '{{tweet.id}}', category._id)">Clear</button>
+																</div>
 														<!-- /ko -->
+														
 													</div>
 					  							</div>
 						  					</div>	
@@ -362,10 +385,9 @@ $('.scroller-left').click(function() {
 					</div>
 				</div>
 			</div>
-			<button type="button" class="b-close c btn btn-default" data-bind="click:send"> Send </button>
 		</div>
 		<div>
-                <ul id='options' data-bind="foreach: { data: categories, as: 'category' }" style="display: none; min-width:80px">
+                <ul id='options' data-bind="foreach: { data: classifications, as: 'category' }" style="display: none; min-width:80px">
 				    <li> <span data-bind="text: category.classification"></span>:
 				        <ul data-bind="foreach: { data: classes, as: 'item' }" style="min-width:50px">
 				            <li>  

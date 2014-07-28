@@ -2,6 +2,10 @@
 {
 	font:300 normal normal 14px/16px "Gotham Narrow","Helvetica Neue",Roboto,"Segoe UI",Calibri,sans-serif;text-decoration:none;-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%;text-transform:none;vertical-align:baseline;list-style:none;border:0;-webkit-outline:0;-moz-outline:0;-ms-outline:0;-o-outline:0;outline:0
 }
+
+.panel-body {
+	border-bottom: solid 1px gray;
+}
 body{display:block;background:transparent}
 img{border:0}
 b,i{font-style:normal;font-weight:normal}
@@ -22,7 +26,7 @@ abbr{border-bottom:0}
 .timeline.pending-scroll-in .stream .h-feed{-webkit-transition:margin-top .5s ease-out;-moz-transition:margin-top .5s ease-out;-o-transition:margin-top .5s ease-out;transition:margin-top .5s ease-out}
 
 
-.tweet{padding:12px 12px 10px 69px;border-width:0 0 1px}
+.tweet{padding:12px 12px 12px 69px;border-bottom:solid 1px gray;}
 
 .header{_float:left;_clear:left}
 .header .avatar{position:absolute;top:0;left:-57px;width:48px;height:48px;background:#fff;border-radius:4px}
@@ -42,5 +46,3 @@ abbr{border-bottom:0}
 .expanded .stats-wide{display:inline-block;margin-top:-2px}
 .stats span{display:inline-block;margin-right:3px;text-transform:uppercase}
 .stats strong{font-weight:bold}
-.
-.
