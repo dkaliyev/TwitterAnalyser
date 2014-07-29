@@ -36,7 +36,7 @@ def start():
     records = tweets_collection.find()
     for record in records:
         tweet = record['text']
-        tmp_classifiers = record['classifiers']
+        tmp_classifiers = record['classifications']
         for clasfId, classId in tmp_classifiers.iteritems():
             if clasfId not in refactored_tweets.keys():
                 refactored_tweets[clasfId] = []

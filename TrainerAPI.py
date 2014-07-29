@@ -40,10 +40,6 @@ global_tweets = []
 class MyTweet(dict):
     pass
 
-auth = tweepy.OAuthHandler('1bsrahHDFzRHbr9lMADNwXFhU', 'F0xbMnkO7eHH3QxJrH9oxAq63T59BdUIYczYdQAvLDqGdrPOAc')
-auth.set_access_token('2464862775-0qoQdD0tSR9CIs95ePK3Rrdn5fDa8VHSu29UJWa', 'dl4CqY4KcxeU5QTKGuFqNUSAZw9ZCz3i3UAnn44wArFbQ')
-api = tweepy.API(auth)
-
 
 def crossdomain(origin=None, methods=None, headers=None,
                 max_age=21600, attach_to_all=True,
@@ -241,17 +237,17 @@ def trainer():
         return Response(json.dumps({"status":"1", "Error":"Cannot match class id"}))    
     ids[tmp['tweet_id']] = tmp['class_id']    
     tmp['last_updated'] = strftime("%Y-%m-%dT%H:%M:%SZ", localtime())    
-    tweets = list(mongo.db.tweets_test1.find({'tweet_id':tmp['tweet_id']}))
+    tweets = list(mongo.db.tweets.find({'tweet_id':tmp['tweet_id']}))
     if tweets == []:
-        _id = mongo.db.tweets_test1.insert({'_id':ObjectId(), 'tweet_id':tmp['tweet_id'], 'classifiers':{tmp['classf_id']:tmp['class_id']}, 'last_updated':tmp['last_updated'], 'text':tmp['text']})   
+        _id = mongo.db.tweets.insert({'_id':ObjectId(), 'tweet_id':tmp['tweet_id'], 'classifications':{tmp['classf_id']:tmp['class_id']}, 'last_updated':tmp['last_updated'], 'text':tmp['text']})   
         if _id != None:
             ids[tmp['tweet_id']] = tmp['class_id']
         else:
             ids[tmp['tweet_id']] = "None"
     else:
-        classifiers = tweets[0]['classifiers']
+        classifiers = tweets[0]['classifications']
         classifiers[tmp['classf_id']] = tmp['class_id']
-        mongo.db.tweets_test1.update({'tweet_id':tmp['tweet_id']}, {"$set":{'classifiers': classifiers, 'last_updated':tmp['last_updated']}})
+        mongo.db.tweets.update({'tweet_id':tmp['tweet_id']}, {"$set":{'classifications': classifiers, 'last_updated':tmp['last_updated']}})
 
     return Response(json.dumps({"status":0, "ids":ids}), mimetype='application/json')
 
@@ -286,14 +282,14 @@ def clear():
             return Response(json.dumps({"status":"1", "Error":"Cannot match classification id"}))  
     
     tmp['last_updated'] = strftime("%Y-%m-%dT%H:%M:%SZ", localtime())    
-    tweets = list(mongo.db.tweets_test1.find({'tweet_id':tmp['tweet_id']}))
+    tweets = list(mongo.db.tweets.find({'tweet_id':tmp['tweet_id']}))
     if tweets == []:
         return Response(json.dumps({"status":"1", "Error":"Tweet doesnt exist"}), mimetype='application/json')
     else:
-        classifiers = dict(tweets[0]['classifiers'])
+        classifiers = dict(tweets[0]['classifications'])
         if tmp['classf_id'] in classifiers.keys():
             del classifiers[tmp['classf_id']]
-            mongo.db.tweets_test1.update({'tweet_id':tmp['tweet_id']}, {"$set":{'classifiers': classifiers, 'last_updated':tmp['last_updated']}})
+            mongo.db.tweets.update({'tweet_id':tmp['tweet_id']}, {"$set":{'classifications': classifiers, 'last_updated':tmp['last_updated']}})
             return Response(json.dumps({"status":0}), mimetype='application/json')
         else:
             return Response(json.dumps({"status":1, "Error": "IDs dont match"}), mimetype='application/json')        
