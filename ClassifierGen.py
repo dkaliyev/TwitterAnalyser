@@ -129,7 +129,7 @@ def features_from_tweet(tweet, label, extractor, **kwargs):
     return (features, label)
 
 if __name__ == "__main__":
-    connect("classification", "tweets_test1", "classifications")
+    connect("classification", "tweets", "classifications")
     while True: 
         start()
         sleep(10)

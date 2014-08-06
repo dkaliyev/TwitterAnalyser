@@ -64,6 +64,26 @@
 	        			self.indexes = ko.observable(self.classifications().length+1),
 	        			self.clsf_name = ko.observable(""),
 	        			self.left_offset = 0,
+	        			self.test_tweet_text = ko.observable(""),
+	        			self.classify = function(){
+	        				$.ajax({
+								  type: "POST",
+								  contentType: "application/json; charset=utf-8",
+								  url: "http://127.0.0.1:5000/classifier",
+								  data: JSON.stringify({'tweet':self.test_tweet_text(), 'classification':$('#test_classifiers').find(':selected').text()}),
+								  success: function (data) {
+								   if(data['Status']==0)
+								   {
+								 		$('#result_span').text("Result: "+data['Result']);
+								   }
+								 	else
+								 	{
+								 		toastr.error(data['Error'], 'There was an error');
+								 	}
+								  },
+								  dataType: "json"
+								});
+	        			}
 	        			self.renderedHandler = function(){
 	        				if ($('#myTab').children().length === self.classifications().length) {
 	        					var id = $('#myTab').children()[0].getAttribute('id');
@@ -101,21 +121,25 @@
 	        				$('.'+self.currentClass).css("display","none");
 	        				$('.'+name).css("display","block");
 	        				$('.'+name).css("z-index",3333);
+	        				$('.btn-clear-'+self.currentClass).css("display","none");
+	        				$('.btn-clear-'+name).css("display","block");
+	        				$('.btn-clear-'+name).css("z-index",3333);
 
 	        				$('#btn-'+self.currentClass).css('z-index', self.currentInd);
 	        				self.currentInd = $('#btn-'+name).css('z-index');
 	        				$('#btn-'+name).css('z-index', 3333);
 	        				self.currentClass = name;
 	        			},
-	        			self.clearClass = function(tweet_id, classf_id){
-	        				$('.btn-'+tweet_id+'-'+classf_id).removeClass("btn-success");
-	        				$('#btn-clear-id-'+tweet_id+'-'+classf_id).prop('disabled', true);
+	        			self.clearClass = function(tweet_id, classf_id1){
+	        				console.log(classf_id1);
+	        				$('.btn-'+tweet_id+'-'+classf_id1).removeClass("btn-success");
+	        				$('#btn-clear-id-'+tweet_id+'-'+classf_id1).prop('disabled', true);
 	        				if(obj1[tweet_id]!=undefined){
 	        					$.ajax({
 								  type: "POST",
 								  contentType: "application/json; charset=utf-8",
 								  url: "http://127.0.0.1:5000/clear",
-								  data: JSON.stringify({"content":{'tweet_id':tweet_id, 'classf_id':classf_id}}),
+								  data: JSON.stringify({"content":{'tweet_id':tweet_id, 'classf_id':classf_id1}}),
 								  success: function (data) {
 								   if(data['status']==0)
 								   {
@@ -130,6 +154,9 @@
 								});
 	        				}
 	        			}, 
+	        			self.openTestTweet = function(){
+	        				$('#test_classifiers').bPopup({modalClose: false, onClose: function(){$('#result_span').text('Result:'); self.test_tweet_text("")}})
+	        			},
 	        			self.addNew = function(id, _tweet_id){
 	        				if(id=="1")
 	        				{
@@ -288,7 +315,7 @@
 			<nav class="navbar navbar-default navbar-static-top" role="navigation">
 			  <div class="row">
 				<div class="col-md-12">
-					<form class="navbar-form navbar-left" role="form" method="POST">
+					<form class="navbar-form navbar-left" style="width:100%" role="form" method="POST">
   						<div class="form-group">
   							<input type="text" class="form-control input-lg" placeholder="Include words" name="include">
   							<input type="text" class="form-control input-lg" placeholder="Exclude words" name="exclude">
@@ -305,7 +332,9 @@
   							</select>
   						</div>
   						<button type="submit" class="btn btn-primary btn-lg" style="width:75px" id="search_btn">Go</button>
+  						<button type="button" class="btn btn-default btn-lg" style="width: 150px; float:right" id="test_btn" data-bind="click: openTestTweet">Test classifier</button>
   					</form>
+					
 				</div>
 			 </div>
 			</nav>
@@ -329,7 +358,7 @@
 						</div>
 					</div>
 				</div>
-				<div class="panel-body" style="background-color:#EBF0EF; padding-left:30px">
+				<div class="panel-body" style="">
 					<div class="row">
 							<div class="root timeline ltr twitter-timeline not-touch twitter-timeline-rendered pending-scroll-in">
 								<div class="stream" style="height: 500px">
@@ -370,7 +399,7 @@
 
 																</div>
 																<div style="position:relative; top:0; float:right; display:none;" data-bind="attr: {class: 'btn-clear-'+category.classification, id:'btn-clear-{{tweet.id}}-'+category.classification}, adjustHeightClear: $root.adjustHeightClear.bind($data, '{{tweet.id}}', category.classification)">	
-																<button type="button" class="btn btn-default" data-bind="attr: {id: 'btn-clear-id-{{tweet.id}}-'+category._id}, click: $root.clearClass.bind($data, '{{tweet.id}}', category._id)">Clear</button>
+																<button type="button" class="btn btn-default" data-bind="attr: {id: 'btn-clear-id-{{tweet.id}}-'+category._id}, click: $root.clearClass.bind($data, '{{tweet.id}}', category._id)" disabled="true">Clear</button>
 																</div>
 														<!-- /ko -->
 														
@@ -431,6 +460,48 @@
 					</div>
 				</div>
 			   </fieldset></form>
+		</div>
+
+		<div id="test_classifiers">
+			<form class="form col-md-12">
+				<fieldset>
+					<div class="col-md-12">
+						<legend>Testing the classifier</legend>
+					</div>
+					
+						
+					<div class="form-group col-md-12">
+					<div class="col-md-12">
+					  <textarea id="test_tweet" data-bind="value: test_tweet_text" rows=5 placeholder="Here goes the tweet" class="form-control input-md" required="">
+					  </textarea>
+					</div>
+					</div>
+					<div class="form-group col-md-12">
+					<div class="col-md-12">
+					  <select id="select_cls" class="form-control input-md" required data-toggle="tooltip" id="classifications_list" data-trigger="hover" title="Classifications" data-placement="bottom" data-bind="foreach: classifications">
+						  	
+						  	<option data-bind="attr:{value: classification}, text: classification"></option>
+						  	
+					  </select>
+					  </div>
+					</div>
+					<div class="form-group col-md-12">
+						
+							<div class="col-md-3">
+								<button class="btn btn-primary" data-bind="click: classify">Classify</button>
+							</div>
+							<div class="col-md-6">
+								<span id="result_span" style="font-size:x-large">Result:</span>
+							</div>
+							<div class="col-md-3">
+								<button name="cancel_btn" class="btn btn-default b-close" style="float:right">Cancel</button>
+							</div>
+						
+					</div>
+						
+				
+				</fieldset>
+			</form>
 		</div>
 
 	</body>

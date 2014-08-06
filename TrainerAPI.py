@@ -21,6 +21,7 @@ from functools import update_wrapper
 import arrow
 from datetime import timedelta
 import urllib2
+import requests
 
 
 
@@ -36,6 +37,7 @@ global_ids = {} # used to globally maintain list of ids
 classifier = None
 mode = 0 # 0:online, 1:offline
 global_tweets = []
+refactored_tweets = {}
 
 class MyTweet(dict):
     pass
@@ -198,6 +200,8 @@ def classification():
                 tmp["_id"] = _id
                 tmp_classes = [{"_id":str(_class['_id']), "name":_class['name']} for _class in tmp['classes']]
                 tmp['classes'] = tmp_classes
+                headers = {'content-type': 'application/json'}
+                r = requests.post("http://127.0.0.1:3000/newClassification", data=json.dumps({'data':tmp}), headers=headers)
                 return Response(json.dumps({"status":"0", "content":tmp}), mimetype='application/json')
             else:
                 return Response(json.dumps({"status":"1", "Error":"Cant insert new classification into database"}), mimetype='application/json')
@@ -238,6 +242,8 @@ def trainer():
     ids[tmp['tweet_id']] = tmp['class_id']    
     tmp['last_updated'] = strftime("%Y-%m-%dT%H:%M:%SZ", localtime())    
     tweets = list(mongo.db.tweets.find({'tweet_id':tmp['tweet_id']}))
+    headers = {'content-type': 'application/json'}
+    r = requests.post("http://127.0.0.1:3000/newTweet", data=json.dumps({'data':tmp['classf_id']}), headers=headers)
     if tweets == []:
         _id = mongo.db.tweets.insert({'_id':ObjectId(), 'tweet_id':tmp['tweet_id'], 'classifications':{tmp['classf_id']:tmp['class_id']}, 'last_updated':tmp['last_updated'], 'text':tmp['text']})   
         if _id != None:
@@ -289,6 +295,8 @@ def clear():
         classifiers = dict(tweets[0]['classifications'])
         if tmp['classf_id'] in classifiers.keys():
             del classifiers[tmp['classf_id']]
+            headers = {'content-type': 'application/json'}
+            r = requests.post("http://127.0.0.1:3000/clear", data=json.dumps({'data':tmp['classf_id']}), headers=headers)
             mongo.db.tweets.update({'tweet_id':tmp['tweet_id']}, {"$set":{'classifications': classifiers, 'last_updated':tmp['last_updated']}})
             return Response(json.dumps({"status":0}), mimetype='application/json')
         else:
@@ -308,11 +316,35 @@ def main():
     try:
         f = open("%s.pickle" % classification)
     except IOError:
-        return Response(json.dumps({"Status": 1, "Error":"Cant open the file"}), mimetype='application/json')
+        return Response(json.dumps({"Status": 1, "Error":"Not enough tweets to classify"}), mimetype='application/json')
     classifier = pickle.load(f)
     _tweet = word_indicator(tweet)
     result = classifier.classify(_tweet)
     return Response(json.dumps({"Status": 0, "Result":result}), mimetype='application/json')
+
+@app.route("/tweets", methods=["GET"])
+@crossdomain(origin="*")
+def tweets():
+    records = mongo.db.tweets.find()
+    refactored_tweets = {}
+    
+    for record in records:
+        tweet_id = record['tweet_id']
+        classifications = record['classifications']
+        for classification, _class in classifications.iteritems():
+            if classification not in refactored_tweets.keys():
+                refactored_tweets[classification] = {}
+                refactored_tweets[classification]['total_count'] = 1
+                refactored_tweets[classification]['per_class_count'] = {}
+                refactored_tweets[classification]['per_class_count'][_class] = 1
+            else:
+                refactored_tweets[classification]['total_count']+= 1
+                if _class not in refactored_tweets[classification]['per_class_count'].keys():
+                    refactored_tweets[classification]['per_class_count'][_class] = 1
+                else:
+                    refactored_tweets[classification]['per_class_count'][_class]+=1
+    return Response(json.dumps({"Status": 0, "Result":refactored_tweets}), mimetype='application/json')
+
 
     
 if __name__ == '__main__':

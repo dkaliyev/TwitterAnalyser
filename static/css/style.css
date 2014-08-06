@@ -23,6 +23,18 @@ nav.navbar {
     min-height: 180px;
     margin-top: 50px;
 }
+
+#test_classifiers { 
+    background-color:#fff;
+    border-radius:15px;
+    color:#000;
+    display:none; 
+    padding:20px;
+    width:600px;
+    min-height: 180px;
+    margin-top: 50px;
+}
+
 .b-close{
     cursor:pointer; 
 }
@@ -92,8 +104,8 @@ nav.navbar {
 }
 
 .panel {
-  border-color: transparent;
-}
+/*  border-color: transparent;
+*/}
 
 .scroller {
   text-align:center;
